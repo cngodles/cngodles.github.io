@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=2.0, user-scalable=yes">
+  <title>Planetary Diameter Converter</title>
+  <meta name="description" content="A quick tool for finding relative planetary diameters if one size is known or used.">
+  <link rel="shortcut icon" href="../favicon.ico">
+  <link rel="icon" href="../favicon.ico">
+  <link rel="stylesheet" type="text/css" href="css/planets.base.css">
+  <!--[if lt IE 9]>
+  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
+<body>
+<div id="siteframe">
+  <div id="wrapper">
+    <header>
+      <div class="inner">
+        <div class="pad">
+          <h1>Planetary Diameter Converter</h1>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section class="stage">
+        <div class="inner">
+          <a href="#" class="action_choosebase">Choose planet/star</a>
+          <div class="basechoices"></div>
+          <div id="input_step2">
+            <h2 class="choicename">Enter size for Sol</h2>
+            <div class="inputline">
+              <input type="number" min="0" inputmode="numeric" pattern="[0-9]*" id="sunsize" onkeypress="return event.charCode >= 48 && event.charCode <= 57"> cm
+            </div>
+            <ul id="return_dia">
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <div class="inner">
+        <p>Copyright &copy;2018 Clinton N. Godlesky, All Rights Reserved.</p>
+        <div class="spacer20 clearbox"></div>
+      </div>
+    </footer>
+  </div>
+</div>
+<div id="responder"></div>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>if (!window.jQuery) { document.write('<script src="/js/jquery-3.3.1.min.js"><\/script>'); }</script>
+<script type="text/javascript" src="js/planets.main.js"></script>
+<script type="text/javascript" src="js/planets.events.js"></script>
+</body>
+</html>
