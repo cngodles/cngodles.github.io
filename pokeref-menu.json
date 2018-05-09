@@ -1,1 +1,18 @@
-{"menuoptions":[{"name":"Name 1"},{"name":"Name 2"},{"name":"Name 3"}]}
+{
+    "menuoptions":[
+        {"id":"1", "name":"Eclipse","image":"https://i.imgur.com/3Wu1852.jpg"},
+        {"id":"2", "name":"ISO Example","image":"https://i.imgur.com/sMOWlD7.jpg"},
+        {"id":"3", "name":"Metasequoia","image":"https://i.imgur.com/jkOTOBz.jpg"}
+    ],
+    "photooptions":[
+        {"name":"Photo 1"},
+        {"name":"Photo 2"},
+        {"name":"Photo 3"}
+    ],
+    "set3":[
+        {"name":"Set 1"},
+        {"name":"Set 2"},
+        {"name":"Set 3"}
+    ]
+    
+}
