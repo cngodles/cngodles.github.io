@@ -1,7 +1,7 @@
 {
 	"employees": [{
-			"name-first": "Jeff",
-			"name-last": "Smith",
+			"nameFirst": "Jeff",
+			"nameLast": "Smith",
 			"email": "person1@chemistryagency.com",
 			"direct": "404.555.5555",
 			"ext": "300",
@@ -9,8 +9,8 @@
 			"office": "atl"
 		},
 		{
-			"name-first": "John",
-			"name-last": "Smith",
+			"nameFirst": "John",
+			"nameLast": "Smith",
 			"email": "person2@chemistryagency.com",
 			"direct": "404.555.5556",
 			"ext": "310",
@@ -18,8 +18,8 @@
 			"office": "atl"
 		},
 		{
-			"name-first": "Chuck",
-			"name-last": "Smith",
+			"nameFirst": "Chuck",
+			"nameLast": "Smith",
 			"email": "person3@chemistryagency.com",
 			"direct": "412.555.5555",
 			"ext": "200",
@@ -27,8 +27,8 @@
 			"office": "pitt"
 		},
 		{
-			"name-first": "Katie",
-			"name-last": "Smith",
+			"nameFirst": "Katie",
+			"nameLast": "Smith",
 			"email": "person4@chemistryagency.com",
 			"direct": "412.555.5556",
 			"ext": "210",
@@ -36,8 +36,8 @@
 			"office": "pitt"
 		},
 		{
-			"name-first": "Brian",
-			"name-last": "Smith",
+			"nameFirst": "Brian",
+			"nameLast": "Smith",
 			"email": "person5@chemistryagency.com",
 			"direct": "412.555.5557",
 			"ext": "220",
