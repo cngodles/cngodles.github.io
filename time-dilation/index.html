@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Time Dilation</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css?family=Patua+One" rel="stylesheet">
+    <style type="text/css">
+        body      { font-family: 'Patua One', cursive; box-sizing: border-box; }
+        #stage    { width: 100%; min-width:260px; max-width: 600px; margin:10px auto; padding:10px; background-color:lightblue; border:5px solid #666; box-sizing: border-box; }
+        #stage h1 { font-size:30px; line-height:30px; padding:0; margin:5px 0 20px 5px; }
+        input     { font-size:22px; line-height:20px; width:150px; height:40px; border:3px solid #333; margin:5px; padding:5px; box-sizing: border-box; }
+        #result   { font-size:30px; line-height:70px; font-weight:700; margin:5px; }
+        .about    { font-size:18px; line-height:24px; color:#333; }
+        @media only screen and (max-width: 767px) {
+            input     { font-size:16px; line-height:20px; width:90px; height:50px; }
+        }
+    </style>
+    <!--[if lt IE 9]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+    <div id="stage">
+        <h1>Time Dilation</h1>
+        <div><input type="number" id="year" value="10" step="0.01"> Years (Stationary Observer)</div>
+        <div><input type="number" id="percent" value="14.10673" step="0.00001"> Percent Speed of Light</div>
+        <div id="result">...</div>
+        <p class="about">Add number of years in first field, add in a percentage speed of light in the second, and get a result that is the number of years that would pass for the person going that speed.</p>
+    </div>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="js/jquery-3.3.1.min.js">\x3C/script>')</script>
+    <script type="text/javascript">
+        function go(){
+          $("#result").html("working...");
+          var light = 299792458;
+          var speed = 100000;
+          var light = 100;
+          if(isNaN(parseFloat($("#year").val()))){
+            $("#year").val('');
+            $("#result").html("Enter Years.");
+            return false;
+          }
+          if(isNaN(parseFloat($("#percent").val()))){
+            $("#percent").val('');
+            $("#result").html("Enter Speed.");
+            return false;
+          }
+          if($("#percent").val() > 100){
+            $("#result").html("Instant.");
+            return false; 
+          }
+          var speed = parseFloat($("#percent").val());
+          var subject = parseFloat($("#year").val())
+          if(speed > 100){
+            speed = 100;
+          } else if(speed < 0){
+            speed = 0;
+          }
+          var c2 = Math.pow(light, 2);
+          var v2 = Math.pow(speed, 2);
+          var squareme = 1-v2/c2;
+          var dilated = (subject * Math.sqrt(squareme)).toFixed(5);
+          $("#result").html(dilated+" Years");
+        }
+
+        $(document)
+        .ready(function(){
+          go();
+        })
+        .on("change click keyup", "input", function(){
+          go();
+        });
+    </script>
+</body>
+</html>
