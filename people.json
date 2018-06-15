@@ -43,6 +43,33 @@
 			"ext": "220",
 			"cell": "724.555.5557",
 			"office": "pitt"
+		},
+		{
+			"nameFirst": "Alex",
+			"nameLast": "Lastname",
+			"email": "person6@chemistryagency.com",
+			"direct": "412.555.5557",
+			"ext": "221",
+			"cell": "724.555.5558",
+			"office": "pitt"
+		},
+		{
+			"nameFirst": "Ted",
+			"nameLast": "Smith",
+			"email": "person7@chemistryagency.com",
+			"direct": "412.555.5557",
+			"ext": "222",
+			"cell": "724.555.5559",
+			"office": "pitt"
+		},
+		{
+			"nameFirst": "Julie",
+			"nameLast": "Smith",
+			"email": "person8@chemistryagency.com",
+			"direct": "412.555.5557",
+			"ext": "223",
+			"cell": "724.555.5560",
+			"office": "atl"
 		}
 	]
 }

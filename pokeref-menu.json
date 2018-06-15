@@ -2,7 +2,8 @@
     "menuoptions":[
         {"id":"1", "name":"Eclipse","image":"https://i.imgur.com/3Wu1852.jpg"},
         {"id":"2", "name":"ISO Example","image":"https://i.imgur.com/sMOWlD7.jpg"},
-        {"id":"3", "name":"Metasequoia","image":"https://i.imgur.com/jkOTOBz.jpg"}
+        {"id":"3", "name":"Metasequoia","image":"https://i.imgur.com/jkOTOBz.jpg"},
+        {"id":"4", "name":"4th","image":"https://i.imgur.com/jkOTOBz.jpg"}
     ],
     "photooptions":[
         {"name":"Photo 1"},
