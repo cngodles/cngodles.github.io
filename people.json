@@ -6,7 +6,8 @@
 			"direct": "404.555.5555",
 			"ext": "300",
 			"cell": "404.275.1555",
-			"office": "atl"
+			"office": "atl",
+			"icon":"https://placebear.com/g/200/200"
 		},
 		{
 			"nameFirst": "John",
@@ -15,7 +16,8 @@
 			"direct": "404.555.5556",
 			"ext": "310",
 			"cell": "678.576.5821",
-			"office": "atl"
+			"office": "atl",
+			"icon":"https://placebear.com/g/200/200"
 		},
 		{
 			"nameFirst": "Chuck",
@@ -24,7 +26,8 @@
 			"direct": "412.555.5555",
 			"ext": "200",
 			"cell": "412.555.5555",
-			"office": "pitt"
+			"office": "pitt",
+			"icon":"https://placebear.com/g/200/200"
 		},
 		{
 			"nameFirst": "Katie",
@@ -33,7 +36,8 @@
 			"direct": "412.555.5556",
 			"ext": "210",
 			"cell": "724.555.5556",
-			"office": "pitt"
+			"office": "pitt",
+			"icon":"https://placebear.com/g/200/200"
 		},
 		{
 			"nameFirst": "Brian",
@@ -42,7 +46,8 @@
 			"direct": "412.555.5557",
 			"ext": "220",
 			"cell": "724.555.5557",
-			"office": "pitt"
+			"office": "pitt",
+			"icon":"https://placebear.com/g/200/200"
 		},
 		{
 			"nameFirst": "Alex",
@@ -51,7 +56,8 @@
 			"direct": "412.555.5557",
 			"ext": "221",
 			"cell": "724.555.5558",
-			"office": "pitt"
+			"office": "pitt",
+			"icon":"https://placebear.com/g/200/200"
 		},
 		{
 			"nameFirst": "Ted",
@@ -60,7 +66,8 @@
 			"direct": "412.555.5557",
 			"ext": "222",
 			"cell": "724.555.5559",
-			"office": "pitt"
+			"office": "pitt",
+			"icon":"https://placebear.com/g/200/200"
 		},
 		{
 			"nameFirst": "Julie",
@@ -69,7 +76,8 @@
 			"direct": "412.555.5557",
 			"ext": "223",
 			"cell": "724.555.5560",
-			"office": "atl"
+			"office": "atl",
+			"icon":"https://placebear.com/g/200/200"
 		}
 	]
 }
