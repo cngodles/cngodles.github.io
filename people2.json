@@ -1,0 +1,34 @@
+{
+	"type": "success",
+	"users": [{
+		"id": 1,
+		"nameFirst": "Jeff",
+		"nameLast": "Smith",
+		"email": "jsmith@chemistryagency.com",
+		"direct": "412-555-5551",
+		"cell": "412-555-5552",
+		"ext": 364,
+		"office": "atl",
+		"icon": "https:\/\/placebear.com\/g\/200\/200"
+	}, {
+		"id": 2,
+		"nameFirst": "Radcliff",
+		"nameLast": "Smith",
+		"email": "rsmith@chemistryagency.com",
+		"direct": "412-555-5553",
+		"cell": "412-555-5554",
+		"ext": 415,
+		"office": "atl",
+		"icon": "https:\/\/placebear.com\/g\/200\/200"
+	}, {
+		"id": 3,
+		"nameFirst": "Chuck",
+		"nameLast": "Smith",
+		"email": "csmith@chemistryagency.com",
+		"direct": "412-555-5555",
+		"cell": "412-555-5556",
+		"ext": 232,
+		"office": "pitt",
+		"icon": "https:\/\/placebear.com\/g\/200\/200"
+	}]
+}
