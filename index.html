@@ -12,7 +12,8 @@
   <link rel="icon" href="/favicon.ico">
   <style type="text/css">
     body             { margin: 0; font-family: 'Patua One', sans-serif; color:#202020; background-color: #FF3368; min-width:320px; }
-    header           { padding: 30px; font-size: 80px; line-height: 100px; text-align: center; border-bottom: 1px solid #ccc; background-color: #33ffca; }
+    header           { padding: 50px; font-size: 80px; line-height: 100px; text-align: center; border-bottom: 1px solid #ccc; background-color: #33ffca; }
+		header h1 			{ font-size: 90px; font-weight:400; margin: 0; padding: 0; }
     main             { display:block; padding: 30px; background-color: #fff; border-bottom: 1px solid #ccc; }
     .inner           { margin: 0 auto; max-width: 960px;  }
     .shareable       { border-top:1px solid #eee; padding: 40px 0; }
@@ -25,9 +26,21 @@
 <body>
 <div id="siteframe">
   <div id="wrapper">
-    <header>Clint</header>
+		<header><h1>Clint</h1></header>
     <main>
       <div class="inner">
+				<h2 style="font-size:2rem;">Recent Projects</h2>
+				<div class="shareable">
+          <h3>Fossils of Parks Township - Catalog</h3>
+          <p>Interactive specimen catalog. Uses several things to speed up loading and consumption. Lazy loaded photos, browser history object, and local storage of data all help to achieve quick initial and return visit loading.</p>
+          <ul>
+            <li>Interacive search filtering. Parses data in the browser.</li>
+            <li>Return links for searches, modal pages and specimen pages.</li>
+            <li>Local storage with versioning for data set. No need to fetch it again if it's not updated.</li>
+						<li>Custom PHP thumbnailing creates optimized thumbnail and large sized specimen photos.</li>
+          </ul>
+          <a href="https://fossil.15656.com/catalog/">Fossil Catalog</a><br>
+        </div>
         <div class="shareable">
           <h3>Temporal Range Chart Generator</h3>
           <p>Creates temporal range charts within geologic time.</p>
