@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Untitled Document</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body>
+	<h1>JSONP Example</h1>
+	<a href="#" class="action--doit">Fetch the Data</a>
+	<p>In this demo, we are testing if a valid JSONP pull can be performed here.</p>
+	<div id="data">
+
+	</div>
+	<div id="data2">
+
+	</div>
+	
+	<script>
+		var thejsondata = [];
+		$(document)
+			.on("click", ".action--doit", function(){
+			console.log("click");
+			$("#data").html("Loading...");
+
+			$.ajax({
+				url: 'https://cngodles.github.io/sample-state-data.js',
+				dataType: 'jsonp',
+				jsonp: 'genBlockMapData'
+			});
+
+		});
+		function genBlockMapData(data){
+			$('#data').text(data.length);
+			thejsondata = data;
+			var datas = [];
+			for(var i = 0; thejsondata.length > i; i++){
+				datas.push(thejsondata[i].state);
+			}
+			$('#data2').html(datas.join('<br>'));
+		}
+	</script>
+</body>
+</html>
