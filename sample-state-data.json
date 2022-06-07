@@ -1,0 +1,34 @@
+[{
+		"state": "Alabama",
+		"ab": "AL",
+		"m-v": 100,
+		"m-c": 55,
+		"m-sbo": 4,
+		"a-img": "https://www.hrblock.com/tax-center/wp-content/uploads/2021/12/Tax-2021-feature-720x450.jpg",
+		"a-d": "This is a longer description for the article. We should try to keep this to six lines max.",
+		"a-cta": "Learn more about our efforts in Alabama",
+		"a-u": "https://www.hrblock.com/tax-center/newsroom/around-block/about-us/tax-filing-options-2022/"
+	},
+	{
+		"state": "Alaska",
+		"ab": "AK",
+		"m-v": 50,
+		"m-c": 15,
+		"m-sbo": 2,
+		"a-img": "https://www.hrblock.com/tax-center/wp-content/uploads/2021/12/Tax-2021-feature-720x450.jpg",
+		"a-d": "This is a longer description for the article. We should try to keep this to six lines max.",
+		"a-cta": "Learn more about our efforts in Alaska",
+		"a-u": "https://www.hrblock.com/tax-center/newsroom/around-block/about-us/tax-filing-options-2022/"
+	},
+	{
+		"state": "Wyoming",
+		"ab": "WY",
+		"m-v": 20,
+		"m-c": 5,
+		"m-sbo": 1,
+		"a-img": "https://www.hrblock.com/tax-center/wp-content/uploads/2021/12/Tax-2021-feature-720x450.jpg",
+		"a-d": "This is a longer description for the article. We should try to keep this to six lines max.",
+		"a-cta": "Learn more about our efforts in Wyoming",
+		"a-u": "https://www.hrblock.com/tax-center/newsroom/around-block/about-us/tax-filing-options-2022/"
+	}
+]
