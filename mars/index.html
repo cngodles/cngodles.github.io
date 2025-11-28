@@ -1,1 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mars + Moons (To-Scale Orbits)</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: #ddd;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    #wrapper {
+      text-align: center;
+    }
+    canvas {
+      display: block;
+      background: radial-gradient(circle at 30% 30%, #111 0, #000 60%);
+      border: 1px solid #333;
+      margin: 0 auto 0.5rem;
+    }
+    small {
+      opacity: 0.7;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+<div id="wrapper">
+  <canvas id="marsCanvas" width="800" height="800"></canvas>
+  <small>
+    Not to scale: moon radii. To scale: Mars radius & orbital distances (in one 2D plane).
+  </small>
+</div>
 
+<script>
+  // ===== PHYSICAL CONSTANTS (KM, HOURS) =====
+  const MARS_RADIUS_KM   = 3396;     // equatorial radius  [oai_citation:3‡GalaxyCalc](https://www.galaxycalc.com/celestial-bodies/mars?utm_source=chatgpt.com)
+  const PHOBOS_ORBIT_KM  = 9377;     // semi-major axis from Mars’ center  [oai_citation:4‡marspedia.org](https://marspedia.org/Moons_of_Mars_%28Phobos_and_Deimos%29?utm_source=chatgpt.com)
+  const DEIMOS_ORBIT_KM  = 23460;    // semi-major axis from Mars’ center  [oai_citation:5‡marspedia.org](https://marspedia.org/Moons_of_Mars_%28Phobos_and_Deimos%29?utm_source=chatgpt.com)
+
+  const PHOBOS_PERIOD_H  = 7.66;     // hours  [oai_citation:6‡marspedia.org](https://marspedia.org/Moons_of_Mars_%28Phobos_and_Deimos%29?utm_source=chatgpt.com)
+  const DEIMOS_PERIOD_H  = 30.35;    // hours
+
+  // Mean radii (for reference; we won't draw them to scale or they'd be subpixel)
+  const PHOBOS_RADIUS_KM = 11.1;     // ~22.2 km diameter / 2  [oai_citation:7‡marspedia.org](https://marspedia.org/Moons_of_Mars_%28Phobos_and_Deimos%29?utm_source=chatgpt.com)
+  const DEIMOS_RADIUS_KM = 6.2;      //  [oai_citation:8‡Wikipedia](https://en.wikipedia.org/wiki/Deimos_%28moon%29?utm_source=chatgpt.com)
+
+  // ===== CANVAS SETUP =====
+  const canvas = document.getElementById('marsCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const W = canvas.width;
+  const H = canvas.height;
+  const CX = W / 2;
+  const CY = H / 2;
+
+  // ===== SCALING: KM -> PIXELS =====
+  // We want Deimos’ orbit to fit comfortably: say ~300 px from center.
+  const TARGET_DEIMOS_RADIUS_PX = 300;
+  const KM_TO_PX = TARGET_DEIMOS_RADIUS_PX / DEIMOS_ORBIT_KM;
+
+  const marsRadiusPx   = MARS_RADIUS_KM  * KM_TO_PX;
+  const phobosOrbitPx  = PHOBOS_ORBIT_KM * KM_TO_PX;
+  const deimosOrbitPx  = DEIMOS_ORBIT_KM * KM_TO_PX;
+
+  // Moon radii if strictly to scale would be << 1 px; exaggerate for visibility
+  const phobosRadiusPx = 4;   // visually boosted
+  const deimosRadiusPx = 3;   // visually boosted
+
+  // ===== TIME SCALING =====
+  // Keep correct *ratio* of orbital periods; just speed everything up.
+  // Let Phobos complete an orbit in ~5 seconds of real time.
+  const PHOBOS_PERIOD_SIM_SEC = 5;
+  const HOURS_PER_SIM_SECOND  = PHOBOS_PERIOD_H / PHOBOS_PERIOD_SIM_SEC;
+
+  const DEIMOS_PERIOD_SIM_SEC = DEIMOS_PERIOD_H / HOURS_PER_SIM_SECOND;
+
+  // Convert to angular speeds (radians per second)
+  const PHOBOS_ANG_VEL = 2 * Math.PI / PHOBOS_PERIOD_SIM_SEC;
+  const DEIMOS_ANG_VEL = 2 * Math.PI / DEIMOS_PERIOD_SIM_SEC;
+
+  // ===== COORDINATE / ORIENTATION NOTES =====
+  // We use a top-down view of the equatorial plane.
+  // Mathematical +Y is "north", but canvas +Y goes down the screen.
+  // To keep "north up", we invert Y when plotting:
+  // screenX = CX + r * cos(theta)
+  // screenY = CY - r * sin(theta)
+
+  let startTime = null;
+
+  function drawMars() {
+    // Mars disk
+    ctx.save();
+    ctx.translate(CX, CY);
+
+    // Simple radial gradient for Mars
+    const grad = ctx.createRadialGradient(-marsRadiusPx * 0.3, -marsRadiusPx * 0.3, marsRadiusPx * 0.2,
+                                          0, 0, marsRadiusPx);
+    grad.addColorStop(0, '#ffb37a');
+    grad.addColorStop(0.4, '#e15a32');
+    grad.addColorStop(1, '#5b1a10');
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, marsRadiusPx, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Equator line (east-west), aligned horizontally
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-marsRadiusPx, 0);
+    ctx.lineTo( marsRadiusPx, 0);
+    ctx.stroke();
+
+    // Rotation axis (north-south) to indicate "north up"
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.beginPath();
+    ctx.moveTo(0, -marsRadiusPx);
+    ctx.lineTo(0,  marsRadiusPx);
+    ctx.stroke();
+
+    // Simple N/E labels
+    ctx.fillStyle = '#ddd';
+    ctx.font = '12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', 0, -marsRadiusPx - 8);
+    ctx.fillText('S', 0,  marsRadiusPx + 12);
+    ctx.fillText('E', marsRadiusPx + 10, 4);
+    ctx.fillText('W', -marsRadiusPx - 10, 4);
+
+    ctx.restore();
+  }
+
+  function drawOrbit(radiusPx, color, dash = false) {
+    ctx.save();
+    ctx.translate(CX, CY);
+    ctx.beginPath();
+    ctx.arc(0, 0, radiusPx, 0, 2 * Math.PI);
+    if (dash) ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.75;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawMoon(radiusOrbitPx, angle, bodyRadiusPx, fillStyle) {
+    const x = CX + radiusOrbitPx * Math.cos(angle);
+    const y = CY - radiusOrbitPx * Math.sin(angle); // minus => "north" is up
+
+    ctx.beginPath();
+    ctx.arc(x, y, bodyRadiusPx, 0, 2 * Math.PI);
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+  }
+
+  function draw(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const tSec = (timestamp - startTime) / 1000;  // seconds since start
+
+    // Angular positions
+    const thetaPhobos = PHOBOS_ANG_VEL * tSec;
+    const thetaDeimos = DEIMOS_ANG_VEL * tSec;
+
+    // Clear
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw orbits (equatorial plane)
+    drawOrbit(deimosOrbitPx, 'rgba(150,150,150,0.2)', true);
+    drawOrbit(phobosOrbitPx, 'rgba(200,200,200,0.4)');
+
+    // Draw Mars
+    drawMars();
+
+    // Draw moons
+    drawMoon(phobosOrbitPx, thetaPhobos, phobosRadiusPx, '#cccccc');
+    drawMoon(deimosOrbitPx, thetaDeimos, deimosRadiusPx, '#999999');
+
+    requestAnimationFrame(draw);
+  }
+
+  requestAnimationFrame(draw);
+</script>
+</body>
+</html>
