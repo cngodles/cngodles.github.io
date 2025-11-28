@@ -9,10 +9,6 @@
       color-scheme: dark;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       margin: 0;
       background: #050816;
@@ -27,24 +23,23 @@
       width: 100vw;
     }
 
-    #topCanvas,
-    #middleCanvas {
+    .section {
+      padding: 8px 16px 4px;
+      background: #050816;
+      font-size: 15px;
+      font-weight: 500;
+      color: #ddd;
+    }
+
+    canvas {
       display: block;
       width: 100%;
-      /* heights set via JS for crisp canvas pixels */
     }
 
     #bottomPanel {
-      padding: 12px 16px 16px;
+      padding: 14px 16px 18px;
       background: #040b18;
       border-top: 1px solid #222;
-    }
-
-    #bottomPanel h2 {
-      margin: 0 0 8px;
-      font-size: 14px;
-      color: #ddd;
-      font-weight: 500;
     }
 
     #controlsRow {
@@ -71,12 +66,8 @@
       border-color: #ff6666;
     }
 
-    .btn:active {
-      transform: translateY(1px);
-    }
-
     #infoText {
-      margin-top: 8px;
+      margin-top: 10px;
       font-size: 12px;
       color: #ccc;
       max-width: 720px;
@@ -84,45 +75,52 @@
     }
 
     #statusLine {
-      margin-top: 6px;
+      margin-top: 8px;
       font-size: 12px;
       color: #aaa;
     }
 
     @media (max-width: 600px) {
-      #controlsRow {
-        flex-direction: column;
-        align-items: flex-start;
-      }
       .btn {
         width: 100%;
+      }
+
+      #controlsRow {
+        flex-direction: column;
+        align-items: stretch;
       }
     }
   </style>
 </head>
 <body>
+
 <div id="app">
+  <div class="section">Sun → Pluto (Distances to Scale — Photon Simulation)</div>
   <canvas id="topCanvas"></canvas>
+
+  <div class="section">Current Hop (Zoomed Segment View)</div>
   <canvas id="middleCanvas"></canvas>
 
   <div id="bottomPanel">
-    <h2>Controls</h2>
     <div id="controlsRow">
       <button id="modeButton" class="btn">Mode: Simulated (×60)</button>
       <button id="restartButton" class="btn restart">Restart simulation</button>
     </div>
+
     <div id="infoText">
-      <div>Toggle between real time (×1) and accelerated (×60) simulation. Restart sends the photon back to the Sun (t = 0).</div>
+      Toggle between real time (×1) and accelerated (×60) simulation.  
+      Restart sends the photon back to the Sun (t = 0).
     </div>
+
     <div id="statusLine">
-      Sim time: <span id="simTimeText">0s</span> · Photon distance: <span id="photonDistanceText">0 AU</span> · Current hop: <span id="hopText">—</span>
+      Sim time: <span id="simTimeText">0s</span> · 
+      Photon distance: <span id="photonDistanceText">0 AU</span> · 
+      Current hop: <span id="hopText">—</span>
     </div>
   </div>
 </div>
 
 <script>
-  // --- Canvas setup ---------------------------------------------------------
-
   const topCanvas = document.getElementById('topCanvas');
   const middleCanvas = document.getElementById('middleCanvas');
   const topCtx = topCanvas.getContext('2d');
@@ -132,7 +130,6 @@
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // Allocate ~35% + 35% of viewport to canvases, rest to bottom HTML
     const topHeight = Math.round(height * 0.33);
     const middleHeight = Math.round(height * 0.33);
 
@@ -146,12 +143,9 @@
   window.addEventListener('resize', resizeCanvases);
   resizeCanvases();
 
-  // --- Physics / data -------------------------------------------------------
-
   const AU_KM = 149_597_870;
-  const C_KM_S = 299_792;   // speed of light in km/s
+  const C_KM_S = 299_792;
 
-  // Rough mean distances from Sun, in AU
   const bodies = [
     { name: "Sun",     distanceAu: 0.00 },
     { name: "Mercury", distanceAu: 0.39 },
@@ -167,20 +161,16 @@
 
   const maxDistanceAu = bodies[bodies.length - 1].distanceAu;
   const maxDistanceKm = maxDistanceAu * AU_KM;
-  const maxTravelTimeSec = maxDistanceKm / C_KM_S; // sun->Pluto at light speed
+  const maxTravelTimeSec = maxDistanceKm / C_KM_S;
 
-  // --- Simulation speed / mode ---------------------------------------------
+  const REAL_TIME_SPEED = 1;
+  const FAST_SPEED = 60;
 
-  const REAL_TIME_SPEED = 1;   // 1 real second = 1 simulated second
-  const FAST_SPEED      = 60;  // 1 real second = 60 simulated seconds (1 min)
-
-  let simMode  = "simulated";  // "simulated" | "real"
+  let simMode  = "simulated";
   let simSpeed = FAST_SPEED;
 
   let simTimeSec = 0;
   let lastTimestamp = null;
-
-  // --- Bottom DOM elements --------------------------------------------------
 
   const modeButton = document.getElementById('modeButton');
   const restartButton = document.getElementById('restartButton');
@@ -202,10 +192,8 @@
 
   restartButton.addEventListener('click', () => {
     simTimeSec = 0;
-    lastTimestamp = null; // reset clock
+    lastTimestamp = null;
   });
-
-  // --- helpers --------------------------------------------------------------
 
   function formatTime(seconds) {
     const s = Math.floor(seconds);
@@ -213,227 +201,119 @@
     const m = Math.floor((s % 3600) / 60);
     const sec = s % 60;
 
-    if (h > 0) {
-      return `${h}h ${m}m ${sec}s`;
-    } else if (m > 0) {
-      return `${m}m ${sec}s`;
-    } else {
-      return `${sec}s`;
-    }
+    if (h) return `${h}h ${m}m ${sec}s`;
+    if (m) return `${m}m ${sec}s`;
+    return `${sec}s`;
   }
 
   function lightTimeSeconds(distanceAu) {
-    const km = distanceAu * AU_KM;
-    return km / C_KM_S;
+    return (distanceAu * AU_KM) / C_KM_S;
   }
 
   function findCurrentSegment(distanceAu) {
-    // Returns {a, b, t} where a,b are bodies, and t is fraction [0,1] between them
     for (let i = 0; i < bodies.length - 1; i++) {
       const a = bodies[i];
       const b = bodies[i + 1];
       if (distanceAu >= a.distanceAu && distanceAu <= b.distanceAu) {
         const span = b.distanceAu - a.distanceAu || 1;
-        const t = (distanceAu - a.distanceAu) / span;
-        return { a, b, t };
+        return { a, b, t: (distanceAu - a.distanceAu) / span };
       }
     }
-    // Beyond Pluto (clamp to last segment)
-    return {
-      a: bodies[bodies.length - 2],
-      b: bodies[bodies.length - 1],
-      t: 1
-    };
+    return { a: bodies[bodies.length - 2], b: bodies[bodies.length - 1], t: 1 };
   }
 
-  // --- drawing primitives ---------------------------------------------------
-
-  function drawPlanet(ctx, x, y, label, isSun = false, isEarth = false) {
-    const radius = isSun ? 10 : isEarth ? 6 : 4;
+  function drawPlanet(ctx, x, y, label, isSun, isEarth) {
+    const r = isSun ? 10 : isEarth ? 6 : 4;
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fillStyle = isSun ? "#ffcc33" : isEarth ? "#66aaff" : "#aaa";
     ctx.fill();
-
     ctx.fillStyle = "#eee";
     ctx.font = "12px system-ui";
     ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText(label, x, y + radius + 4);
+    ctx.fillText(label, x, y + r + 4);
   }
 
   function drawPhoton(ctx, x, y) {
-    const r = 5;
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
     ctx.shadowColor = "#00ffff";
     ctx.shadowBlur = 12;
     ctx.fillStyle = "#00ffff";
     ctx.fill();
-    ctx.shadowBlur = 0; // reset
+    ctx.shadowBlur = 0;
   }
 
-  // --- layer rendering ------------------------------------------------------
-
-  function drawTopLayer(ctx, width, height, photonDistanceAu) {
-    const marginX = 60;
-    const y = height * 0.5;
-    const lineStartX = marginX;
-    const lineEndX = width - marginX;
-    const spanX = lineEndX - lineStartX;
-
-    // background
+  function drawTop(ctx, w, h, photonDistanceAu) {
     ctx.fillStyle = "#050816";
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, w, h);
 
-    // Title
-    ctx.fillStyle = "#ddd";
-    ctx.font = "14px system-ui";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText("Top: Sun → Pluto (distances to scale, light-speed photon)", 16, 8);
+    const marginX = 60;
+    const y = h * 0.5;
+    const x0 = marginX;
+    const x1 = w - marginX;
+    const span = x1 - x0;
 
-    // main line
     ctx.strokeStyle = "#444";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(lineStartX, y);
-    ctx.lineTo(lineEndX, y);
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y);
     ctx.stroke();
 
-    // planets
     for (const b of bodies) {
-      const frac = b.distanceAu / maxDistanceAu;
-      const x = lineStartX + frac * spanX;
-      const isSun = b.name === "Sun";
-      const isEarth = b.name === "Earth";
-      drawPlanet(ctx, x, y, b.name, isSun, isEarth);
+      const x = x0 + (b.distanceAu / maxDistanceAu) * span;
+      drawPlanet(ctx, x, y, b.name, b.name === "Sun", b.name === "Earth");
     }
 
-    // photon
-    const clamped = Math.min(photonDistanceAu, maxDistanceAu);
-    const photonFrac = clamped / maxDistanceAu;
-    const photonX = lineStartX + photonFrac * spanX;
+    const frac = Math.min(photonDistanceAu / maxDistanceAu, 1);
+    const photonX = x0 + frac * span;
     drawPhoton(ctx, photonX, y);
-
-    // time / distance text
-    ctx.fillStyle = "#ccc";
-    ctx.font = "12px system-ui";
-    ctx.textAlign = "right";
-    ctx.textBaseline = "top";
-
-    ctx.fillText(
-      `Sim time: ${formatTime(simTimeSec)}`,
-      width - 16,
-      8
-    );
-    ctx.fillText(
-      `Photon distance: ${photonDistanceAu.toFixed(2)} AU`,
-      width - 16,
-      26
-    );
-    ctx.fillText(
-      `Sun→Pluto light time: ${formatTime(maxTravelTimeSec)}`,
-      width - 16,
-      44
-    );
   }
 
-  function drawMiddleLayer(ctx, width, height, photonDistanceAu) {
-    const marginX = 60;
-    const y = height * 0.5;
-    const lineStartX = marginX;
-    const lineEndX = width - marginX;
-    const spanX = lineEndX - lineStartX;
-
+  function drawMiddle(ctx, w, h, photonDistanceAu) {
     ctx.fillStyle = "#030311";
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = "#ddd";
-    ctx.font = "14px system-ui";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText("Middle: Zoomed current hop (Sun→Mercury, Mercury→Venus, ...)", 16, 8);
+    const marginX = 60;
+    const y = h * 0.5;
+    const x0 = marginX;
+    const x1 = w - marginX;
 
-    const { a, b, t } = findCurrentSegment(photonDistanceAu);
-
-    // segment line
     ctx.strokeStyle = "#555";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(lineStartX, y);
-    ctx.lineTo(lineEndX, y);
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y);
     ctx.stroke();
 
-    // Draw endpoints
-    const leftX = lineStartX;
-    const rightX = lineEndX;
+    const { a, b, t } = findCurrentSegment(photonDistanceAu);
 
-    const isSunA = a.name === "Sun";
-    const isEarthA = a.name === "Earth";
-    const isSunB = b.name === "Sun";
-    const isEarthB = b.name === "Earth";
+    drawPlanet(ctx, x0, y, a.name, a.name === "Sun", a.name === "Earth");
+    drawPlanet(ctx, x1, y, b.name, b.name === "Sun", b.name === "Earth");
 
-    drawPlanet(ctx, leftX, y, a.name, isSunA, isEarthA);
-    drawPlanet(ctx, rightX, y, b.name, isSunB, isEarthB);
-
-    // photon within segment
-    const photonX = leftX + t * spanX;
+    const photonX = x0 + t * (x1 - x0);
     drawPhoton(ctx, photonX, y);
 
-    // info text
-    const segDistanceAu = b.distanceAu - a.distanceAu;
-    const segTimeSec = lightTimeSeconds(segDistanceAu);
-
-    ctx.fillStyle = "#ccc";
-    ctx.font = "12px system-ui";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-
-    ctx.fillText(
-      `Current hop: ${a.name} → ${b.name} (${segDistanceAu.toFixed(2)} AU)`,
-      16,
-      28
-    );
-    ctx.fillText(
-      `Light time for this hop: ${formatTime(segTimeSec)}`,
-      16,
-      46
-    );
-    ctx.fillText(
-      `Progress in this hop: ${(t * 100).toFixed(1)}%`,
-      16,
-      64
-    );
-
-    // Also update bottom status line text for current hop
     hopText.textContent = `${a.name} → ${b.name}`;
   }
 
-  // --- main loop ------------------------------------------------------------
+  function loop(ts) {
+    if (lastTimestamp == null) lastTimestamp = ts;
+    const dt = (ts - lastTimestamp) / 1000;
+    lastTimestamp = ts;
 
-  function loop(timestamp) {
-    if (lastTimestamp == null) lastTimestamp = timestamp;
-    const dtReal = (timestamp - lastTimestamp) / 1000; // seconds
-    lastTimestamp = timestamp;
+    simTimeSec += dt * simSpeed;
+    if (simTimeSec > maxTravelTimeSec) simTimeSec = 0;
 
-    simTimeSec += dtReal * simSpeed;
+    const photonKm = C_KM_S * simTimeSec;
+    const photonAu = photonKm / AU_KM;
 
-    // Loop when photon passes Pluto
-    if (simTimeSec > maxTravelTimeSec) {
-      simTimeSec = 0;
-    }
+    drawTop(topCtx, topCanvas.width, topCanvas.height, photonAu);
+    drawMiddle(middleCtx, middleCanvas.width, middleCanvas.height, photonAu);
 
-    const photonDistanceKm = C_KM_S * simTimeSec;
-    const photonDistanceAu = photonDistanceKm / AU_KM;
-
-    // Draw canvases
-    drawTopLayer(topCtx, topCanvas.width, topCanvas.height, photonDistanceAu);
-    drawMiddleLayer(middleCtx, middleCanvas.width, middleCanvas.height, photonDistanceAu);
-
-    // Update bottom DOM text
     simTimeText.textContent = formatTime(simTimeSec);
-    photonDistanceText.textContent = `${photonDistanceAu.toFixed(2)} AU`;
+    photonDistanceText.textContent = photonAu.toFixed(2) + " AU";
 
     requestAnimationFrame(loop);
   }
