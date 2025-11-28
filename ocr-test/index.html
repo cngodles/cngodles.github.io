@@ -1,3 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Client-Side OCR (Improved)</title>
+<script src="https://unpkg.com/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
+
+<style>
+  body { font-family: system-ui, sans-serif; padding: 20px; max-width: 700px; }
+  #preview { max-width: 300px; margin-top: 10px; border: 1px solid #ccc; }
+  #text { width: 100%; height: 250px; margin-top: 15px; }
+  #status { margin-top: 10px; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<h1>Image to Text (Refined OCR)</h1>
+
+<input type="file" id="fileInput" accept="image/*" />
+<br/>
+<img id="preview" alt="preview" />
+<div id="status"></div>
+<textarea id="text" placeholder="Recognized text will appear here..."></textarea>
+
+<!-- Hidden canvas for preprocessing -->
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
@@ -8,6 +33,35 @@
   const canvas    = document.getElementById('canvas');
   const ctx       = canvas.getContext('2d');
 
+  // ---- OCR Worker ----
+  async function ocrWithWorker(image) {
+    const worker = Tesseract.createWorker({
+      logger: m => {
+        if (m.status) {
+          statusEl.textContent = `${m.status} (${Math.round(m.progress * 100)}%)`;
+        }
+      }
+    });
+
+    await worker.load();
+    await worker.loadLanguage('eng');
+    await worker.initialize('eng');
+
+    // Stronger, more restrictive OCR settings
+    await worker.setParameters({
+      tessedit_char_whitelist: 
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_.:,()/% ',
+      tessedit_pageseg_mode: '6',  // assume a block of text
+      user_defined_dpi: '300',
+      preserve_interword_spaces: '1'
+    });
+
+    const { data: { text } } = await worker.recognize(image);
+    await worker.terminate();
+    return text;
+  }
+
+  // ---- File Input Handler ----
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -15,12 +69,13 @@
     const url = URL.createObjectURL(file);
     preview.src = url;
 
-    // Wait for image to load so we know width/height
+    statusEl.textContent = 'Loading image…';
+
     const img = new Image();
     img.onload = async () => {
-      // ---- 1) Resize / scale ----
+      // Resize / scale image
       const maxWidth = 1500;
-      const scale = Math.min(1, maxWidth / img.width); // only scale down if too big
+      const scale = Math.min(1, maxWidth / img.width);
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);
 
@@ -28,43 +83,34 @@
       canvas.height = h;
       ctx.drawImage(img, 0, 0, w, h);
 
-      // ---- 2) Grayscale + simple threshold ----
+      // Grayscale + threshold
+      statusEl.textContent = 'Preprocessing…';
       const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
-      const threshold = 160; // tweak if needed
+      const threshold = 160;
 
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i + 1], b = data[i + 2];
-        // luminance
-        const v = 0.299 * r + 0.587 * g + 0.114 * b;
-        const val = v < threshold ? 0 : 255; // black/white
-        data[i] = data[i + 1] = data[i + 2] = val;
+        const v = 0.299*r + 0.587*g + 0.114*b;
+        const bw = v < threshold ? 0 : 255;
+        data[i] = data[i+1] = data[i+2] = bw;
       }
+
       ctx.putImageData(imgData, 0, 0);
 
+      // Run OCR with worker
       statusEl.textContent = 'Running OCR…';
+      const text = await ocrWithWorker(canvas);
 
-      try {
-        const { data: { text } } = await Tesseract.recognize(
-          canvas,  // <-- pass the processed canvas, not the raw file
-          'eng',
-          {
-            logger: m => {
-              if (m.status) {
-                statusEl.textContent = `${m.status} (${Math.round(m.progress * 100)}%)`;
-              }
-            }
-          }
-        );
-        textArea.value = text;
-        statusEl.textContent = 'Done.';
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = 'Error running OCR. See console.';
-      } finally {
-        URL.revokeObjectURL(url);
-      }
+      textArea.value = text;
+      statusEl.textContent = 'Done.';
+
+      URL.revokeObjectURL(url);
     };
+
     img.src = url;
   });
 </script>
+
+</body>
+</html>
