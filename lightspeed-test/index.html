@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Speed of Light – Solar System to Scale</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <style>
     body {
       margin: 0;
@@ -364,24 +365,20 @@
     const infoY = panelY + 24;
 
     ctx.fillText(
-      "Click the mode button to toggle between real time (×1) and accelerated (×60) simulation.",
+      "Toggle between real time (×1) and accelerated (×60) simulation.",
       infoX,
       infoY
     );
     ctx.fillText(
-      "Click 'Restart simulation' to send the photon back to the Sun (t = 0).",
+      "Restart sends the photon back to the Sun (t = 0).",
       infoX,
       infoY + 20
     );
   }
 
-  // --- click handling for canvas controls -----------------------------------
+  // --- shared handler for click/touch on canvas controls --------------------
 
-  canvas.addEventListener("click", (event) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
+  function handleCanvasInteraction(x, y) {
     const { modeButton, restartButton } = controlsState;
 
     function inButton(btn) {
@@ -400,11 +397,36 @@
         simMode = "simulated";
         simSpeed = FAST_SPEED;
       }
-    } else if (inButton(restartButton)) {
-      // restart sim
-      simTimeSec = 0;
+      return;
     }
+
+    if (inButton(restartButton)) {
+      simTimeSec = 0;
+      return;
+    }
+  }
+
+  canvas.addEventListener("click", (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    handleCanvasInteraction(x, y);
   });
+
+  // touch support for iPhone / iPad
+  function handleTouch(event) {
+    event.preventDefault(); // avoid double-tap zoom / scrolling
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    handleCanvasInteraction(x, y);
+  }
+
+  canvas.addEventListener("touchstart", handleTouch, { passive: false });
 
   // --- main loop ------------------------------------------------------------
 
