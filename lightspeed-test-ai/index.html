@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Speed of Light – Solar System to Scale</title>
+  <style>
+    body {
+      margin: 0;
+      background: #050816;
+      color: #eee;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    #spaceCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+<canvas id="spaceCanvas"></canvas>
+
+<script>
+  const canvas = document.getElementById('spaceCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // --- Physics / data -------------------------------------------------------
+
+  const AU_KM = 149_597_870;
+  const C_KM_S = 299_792;   // speed of light in km/s
+  const EARTH_CIRC_KM = 40_075;
+
+  // Rough mean distances from Sun, in AU
+  const bodies = [
+    { name: "Sun",     distanceAu: 0.00 },
+    { name: "Mercury", distanceAu: 0.39 },
+    { name: "Venus",   distanceAu: 0.72 },
+    { name: "Earth",   distanceAu: 1.00 },
+    { name: "Mars",    distanceAu: 1.52 },
+    { name: "Jupiter", distanceAu: 5.20 },
+    { name: "Saturn",  distanceAu: 9.58 },
+    { name: "Uranus",  distanceAu: 19.2 },
+    { name: "Neptune", distanceAu: 30.1 },
+    { name: "Pluto",   distanceAu: 39.5 },
+  ];
+
+  const maxDistanceAu = bodies[bodies.length - 1].distanceAu;
+  const maxDistanceKm = maxDistanceAu * AU_KM;
+  const maxTravelTimeSec = maxDistanceKm / C_KM_S; // sun->Pluto at light speed
+
+  // Simulation speed: how many simulated seconds per real second
+  const SIM_SPEED = 60; // 1 real second = 1 simulated minute
+
+  let simTimeSec = 0;
+  let lastTimestamp = null;
+
+  // --- helpers --------------------------------------------------------------
+
+  function formatTime(seconds) {
+    const s = Math.floor(seconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+
+    if (h > 0) {
+      return `${h}h ${m}m ${sec}s`;
+    } else if (m > 0) {
+      return `${m}m ${sec}s`;
+    } else {
+      return `${sec}s`;
+    }
+  }
+
+  function lightTimeSeconds(distanceAu) {
+    const km = distanceAu * AU_KM;
+    return km / C_KM_S;
+  }
+
+  function findCurrentSegment(distanceAu) {
+    // Returns {a, b, t} where a,b are bodies, and t is fraction [0,1] between them
+    for (let i = 0; i < bodies.length - 1; i++) {
+      const a = bodies[i];
+      const b = bodies[i + 1];
+      if (distanceAu >= a.distanceAu && distanceAu <= b.distanceAu) {
+        const span = b.distanceAu - a.distanceAu || 1;
+        const t = (distanceAu - a.distanceAu) / span;
+        return { a, b, t };
+      }
+    }
+    // Beyond Pluto (loop)
+    return {
+      a: bodies[bodies.length - 2],
+      b: bodies[bodies.length - 1],
+      t: 1
+    };
+  }
+
+  // --- drawing primitives ---------------------------------------------------
+
+  function drawPlanet(ctx, x, y, label, isSun = false, isEarth = false) {
+    const radius = isSun ? 10 : isEarth ? 6 : 4;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = isSun ? "#ffcc33" : isEarth ? "#66aaff" : "#aaa";
+    ctx.fill();
+
+    ctx.fillStyle = "#eee";
+    ctx.font = "12px system-ui";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(label, x, y + radius + 4);
+  }
+
+  function drawPhoton(ctx, x, y) {
+    const r = 5;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.shadowColor = "#00ffff";
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = "#00ffff";
+    ctx.fill();
+    ctx.shadowBlur = 0; // reset
+  }
+
+  // --- layer rendering ------------------------------------------------------
+
+  function drawTopLayer(width, top, height, photonDistanceAu) {
+    const marginX = 60;
+    const y = top + height * 0.5;
+    const lineStartX = marginX;
+    const lineEndX = width - marginX;
+    const spanX = lineEndX - lineStartX;
+
+    // background
+    ctx.fillStyle = "#050816";
+    ctx.fillRect(0, top, width, height);
+
+    // Title
+    ctx.fillStyle = "#ddd";
+    ctx.font = "14px system-ui";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("Top: Sun → Pluto (distances to scale, light-speed photon)", 16, top + 8);
+
+    // main line
+    ctx.strokeStyle = "#444";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lineStartX, y);
+    ctx.lineTo(lineEndX, y);
+    ctx.stroke();
+
+    // planets
+    for (const b of bodies) {
+      const frac = b.distanceAu / maxDistanceAu;
+      const x = lineStartX + frac * spanX;
+      const isSun = b.name === "Sun";
+      const isEarth = b.name === "Earth";
+      drawPlanet(ctx, x, y, b.name, isSun, isEarth);
+    }
+
+    // photon
+    const clamped = Math.min(photonDistanceAu, maxDistanceAu);
+    const photonFrac = clamped / maxDistanceAu;
+    const photonX = lineStartX + photonFrac * spanX;
+    drawPhoton(ctx, photonX, y);
+
+    // time / distance text
+    ctx.fillStyle = "#ccc";
+    ctx.font = "12px system-ui";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+
+    ctx.fillText(
+      `Sim time since leaving Sun: ${formatTime(simTimeSec)}`,
+      width - 16,
+      top + 8
+    );
+    ctx.fillText(
+      `Photon distance: ${photonDistanceAu.toFixed(2)} AU`,
+      width - 16,
+      top + 26
+    );
+    ctx.fillText(
+      `Total Sun→Pluto light time: ${formatTime(maxTravelTimeSec)}`,
+      width - 16,
+      top + 44
+    );
+  }
+
+  function drawMiddleLayer(width, top, height, photonDistanceAu) {
+    const marginX = 60;
+    const y = top + height * 0.5;
+    const lineStartX = marginX;
+    const lineEndX = width - marginX;
+    const spanX = lineEndX - lineStartX;
+
+    ctx.fillStyle = "#030311";
+    ctx.fillRect(0, top, width, height);
+
+    ctx.fillStyle = "#ddd";
+    ctx.font = "14px system-ui";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("Middle: Zoomed current hop (Sun→Mercury, Mercury→Venus, ...)", 16, top + 8);
+
+    const { a, b, t } = findCurrentSegment(photonDistanceAu);
+
+    // segment line
+    ctx.strokeStyle = "#555";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lineStartX, y);
+    ctx.lineTo(lineEndX, y);
+    ctx.stroke();
+
+    // Draw just endpoints
+    const leftX = lineStartX;
+    const rightX = lineEndX;
+
+    const isSunA = a.name === "Sun";
+    const isEarthA = a.name === "Earth";
+    const isSunB = b.name === "Sun";
+    const isEarthB = b.name === "Earth";
+
+    drawPlanet(ctx, leftX, y, a.name, isSunA, isEarthA);
+    drawPlanet(ctx, rightX, y, b.name, isSunB, isEarthB);
+
+    // photon within segment
+    const photonX = leftX + t * spanX;
+    drawPhoton(ctx, photonX, y);
+
+    // info text
+    const segDistanceAu = b.distanceAu - a.distanceAu;
+    const segTimeSec = lightTimeSeconds(segDistanceAu);
+
+    ctx.fillStyle = "#ccc";
+    ctx.font = "12px system-ui";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+
+    ctx.fillText(
+      `Current hop: ${a.name} → ${b.name} (${segDistanceAu.toFixed(2)} AU)`,
+      16,
+      top + 28
+    );
+    ctx.fillText(
+      `Light time for this hop: ${formatTime(segTimeSec)}`,
+      16,
+      top + 46
+    );
+    ctx.fillText(
+      `Progress in this hop: ${(t * 100).toFixed(1)}%`,
+      16,
+      top + 64
+    );
+  }
+
+  function drawBottomLayer(width, top, height, photonDistanceAu) {
+    ctx.fillStyle = "#040b18";
+    ctx.fillRect(0, top, width, height);
+
+    ctx.fillStyle = "#ddd";
+    ctx.font = "14px system-ui";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("Bottom: Earth-scale context", 16, top + 8);
+
+    const centerY = top + height * 0.5;
+
+    // 1) How many Earth laps in this time?
+    const lightDistanceKm = C_KM_S * simTimeSec;
+    const laps = lightDistanceKm / EARTH_CIRC_KM;
+
+    // Draw Earth circle
+    const earthX = 120;
+    const earthR = 32;
+    ctx.beginPath();
+    ctx.arc(earthX, centerY, earthR, 0, Math.PI * 2);
+    ctx.fillStyle = "#1b3b8a";
+    ctx.fill();
+
+    ctx.strokeStyle = "#66ff99";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(earthX, centerY, earthR + 4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = "#eee";
+    ctx.font = "12px system-ui";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Earth", earthX, centerY);
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#ccc";
+    ctx.fillText(
+      `Since leaving the Sun, light could have gone around Earth ~${laps.toFixed(1)} times.`,
+      earthX + earthR + 40,
+      centerY - 12
+    );
+    ctx.fillText(
+      `(Earth circumference ≈ ${EARTH_CIRC_KM.toLocaleString()} km)`,
+      earthX + earthR + 40,
+      centerY + 8
+    );
+
+    // 2) Communication delay Earth ↔ current planet
+    // Choose "current planet" as the last body behind the photon
+    let currentPlanet = bodies[0];
+    for (const b of bodies) {
+      if (b.distanceAu <= photonDistanceAu) {
+        currentPlanet = b;
+      }
+    }
+
+    const earthAu = 1.0;
+    const distanceEarthToCurrentAu = Math.abs(currentPlanet.distanceAu - earthAu);
+    const oneWaySec = lightTimeSeconds(distanceEarthToCurrentAu);
+    const roundTripSec = 2 * oneWaySec;
+
+    const boxX = 16;
+    const boxY = top + height - 70;
+    const boxW = width - 32;
+    const boxH = 54;
+
+    ctx.fillStyle = "#0b1222";
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+    ctx.fillStyle = "#eee";
+    ctx.font = "12px system-ui";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(
+      `If you sent a radio signal from Earth to ${currentPlanet.name} right now:`,
+      boxX + 8,
+      boxY + 6
+    );
+    ctx.fillText(
+      `• One-way signal time: ${formatTime(oneWaySec)}    • Round-trip (send + reply): ${formatTime(roundTripSec)}`,
+      boxX + 8,
+      boxY + 24
+    );
+  }
+
+  // --- main loop ------------------------------------------------------------
+
+  function loop(timestamp) {
+    if (lastTimestamp == null) lastTimestamp = timestamp;
+    const dtReal = (timestamp - lastTimestamp) / 1000; // seconds
+    lastTimestamp = timestamp;
+
+    simTimeSec += dtReal * SIM_SPEED;
+
+    // Loop when photon passes Pluto
+    if (simTimeSec > maxTravelTimeSec) {
+      simTimeSec = 0;
+    }
+
+    const photonDistanceKm = C_KM_S * simTimeSec;
+    const photonDistanceAu = photonDistanceKm / AU_KM;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const layerHeight = h / 3;
+
+    ctx.clearRect(0, 0, w, h);
+
+    drawTopLayer(w, 0 * layerHeight, layerHeight, photonDistanceAu);
+    drawMiddleLayer(w, 1 * layerHeight, layerHeight, photonDistanceAu);
+    drawBottomLayer(w, 2 * layerHeight, layerHeight, photonDistanceAu);
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+</script>
+</body>
+</html>
