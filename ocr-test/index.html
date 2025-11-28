@@ -1,61 +1,70 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Client-side Image OCR</title>
-  <script src="https://unpkg.com/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
-  <style>
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; }
-    #preview { max-width: 300px; max-height: 300px; display: block; margin-top: 10px; }
-    #text { width: 100%; height: 200px; margin-top: 10px; }
-    #status { margin-top: 10px; font-size: 0.9rem; color: #555; }
-  </style>
-</head>
-<body>
-  <h1>Image to Text (Client-side)</h1>
+<canvas id="canvas" style="display:none;"></canvas>
 
-  <input type="file" id="fileInput" accept="image/*" />
-  <img id="preview" alt="Preview will appear here" />
-  <div id="status"></div>
-  <textarea id="text" placeholder="Recognized text will appear here..."></textarea>
+<script>
+  const fileInput = document.getElementById('fileInput');
+  const preview   = document.getElementById('preview');
+  const statusEl  = document.getElementById('status');
+  const textArea  = document.getElementById('text');
+  const canvas    = document.getElementById('canvas');
+  const ctx       = canvas.getContext('2d');
 
-  <script>
-    const fileInput = document.getElementById('fileInput');
-    const preview   = document.getElementById('preview');
-    const statusEl  = document.getElementById('status');
-    const textArea  = document.getElementById('text');
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    const url = URL.createObjectURL(file);
+    preview.src = url;
 
-      // Show a local preview (still only in memory)
-      const url = URL.createObjectURL(file);
-      preview.src = url;
+    // Wait for image to load so we know width/height
+    const img = new Image();
+    img.onload = async () => {
+      // ---- 1) Resize / scale ----
+      const maxWidth = 1500;
+      const scale = Math.min(1, maxWidth / img.width); // only scale down if too big
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // ---- 2) Grayscale + simple threshold ----
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+      const threshold = 160; // tweak if needed
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        // luminance
+        const v = 0.299 * r + 0.587 * g + 0.114 * b;
+        const val = v < threshold ? 0 : 255; // black/white
+        data[i] = data[i + 1] = data[i + 2] = val;
+      }
+      ctx.putImageData(imgData, 0, 0);
 
       statusEl.textContent = 'Running OCR…';
 
       try {
         const { data: { text } } = await Tesseract.recognize(
-          file,          // you can pass the File object directly
-          'eng',         // language
+          canvas,  // <-- pass the processed canvas, not the raw file
+          'eng',
           {
             logger: m => {
-              if (m.status) statusEl.textContent = `${m.status} (${Math.round(m.progress * 100)}%)`;
+              if (m.status) {
+                statusEl.textContent = `${m.status} (${Math.round(m.progress * 100)}%)`;
+              }
             }
           }
         );
-
         textArea.value = text;
         statusEl.textContent = 'Done.';
       } catch (err) {
         console.error(err);
         statusEl.textContent = 'Error running OCR. See console.';
       } finally {
-        // Optional: revoke the blob URL when done with preview
-        // URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url);
       }
-    });
-  </script>
-</body>
-</html>
+    };
+    img.src = url;
+  });
+</script>
