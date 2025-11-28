@@ -5,34 +5,146 @@
   <title>Speed of Light – Solar System to Scale</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       background: #050816;
       color: #eee;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      overflow: hidden;
     }
-    #spaceCanvas {
-      display: block;
-      width: 100vw;
+
+    #app {
+      display: flex;
+      flex-direction: column;
       height: 100vh;
+      width: 100vw;
+    }
+
+    #topCanvas,
+    #middleCanvas {
+      display: block;
+      width: 100%;
+      /* heights set via JS for crisp canvas pixels */
+    }
+
+    #bottomPanel {
+      padding: 12px 16px 16px;
+      background: #040b18;
+      border-top: 1px solid #222;
+    }
+
+    #bottomPanel h2 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: #ddd;
+      font-weight: 500;
+    }
+
+    #controlsRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1.5px solid #4a5cff;
+      background: #151b33;
+      color: #eee;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
       cursor: pointer;
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .btn.restart {
+      border-color: #ff6666;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    #infoText {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #ccc;
+      max-width: 720px;
+      line-height: 1.4;
+    }
+
+    #statusLine {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    @media (max-width: 600px) {
+      #controlsRow {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-<canvas id="spaceCanvas"></canvas>
+<div id="app">
+  <canvas id="topCanvas"></canvas>
+  <canvas id="middleCanvas"></canvas>
+
+  <div id="bottomPanel">
+    <h2>Controls</h2>
+    <div id="controlsRow">
+      <button id="modeButton" class="btn">Mode: Simulated (×60)</button>
+      <button id="restartButton" class="btn restart">Restart simulation</button>
+    </div>
+    <div id="infoText">
+      <div>Toggle between real time (×1) and accelerated (×60) simulation. Restart sends the photon back to the Sun (t = 0).</div>
+    </div>
+    <div id="statusLine">
+      Sim time: <span id="simTimeText">0s</span> · Photon distance: <span id="photonDistanceText">0 AU</span> · Current hop: <span id="hopText">—</span>
+    </div>
+  </div>
+</div>
 
 <script>
-  const canvas = document.getElementById('spaceCanvas');
-  const ctx = canvas.getContext('2d');
+  // --- Canvas setup ---------------------------------------------------------
 
-  function resizeCanvas() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
+  const topCanvas = document.getElementById('topCanvas');
+  const middleCanvas = document.getElementById('middleCanvas');
+  const topCtx = topCanvas.getContext('2d');
+  const middleCtx = middleCanvas.getContext('2d');
+
+  function resizeCanvases() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Allocate ~35% + 35% of viewport to canvases, rest to bottom HTML
+    const topHeight = Math.round(height * 0.33);
+    const middleHeight = Math.round(height * 0.33);
+
+    topCanvas.width = width;
+    topCanvas.height = topHeight;
+
+    middleCanvas.width = width;
+    middleCanvas.height = middleHeight;
   }
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
+
+  window.addEventListener('resize', resizeCanvases);
+  resizeCanvases();
 
   // --- Physics / data -------------------------------------------------------
 
@@ -68,14 +180,30 @@
   let simTimeSec = 0;
   let lastTimestamp = null;
 
-  // --- UI control hitboxes (bottom panel) -----------------------------------
+  // --- Bottom DOM elements --------------------------------------------------
 
-  const controlsState = {
-    modeButton: { x: 0, y: 0, w: 0, h: 0 },
-    restartButton: { x: 0, y: 0, w: 0, h: 0 },
-    bottomTop: 0,
-    bottomHeight: 0,
-  };
+  const modeButton = document.getElementById('modeButton');
+  const restartButton = document.getElementById('restartButton');
+  const simTimeText = document.getElementById('simTimeText');
+  const photonDistanceText = document.getElementById('photonDistanceText');
+  const hopText = document.getElementById('hopText');
+
+  modeButton.addEventListener('click', () => {
+    if (simMode === "simulated") {
+      simMode = "real";
+      simSpeed = REAL_TIME_SPEED;
+      modeButton.textContent = "Mode: Real Time (×1)";
+    } else {
+      simMode = "simulated";
+      simSpeed = FAST_SPEED;
+      modeButton.textContent = "Mode: Simulated (×60)";
+    }
+  });
+
+  restartButton.addEventListener('click', () => {
+    simTimeSec = 0;
+    lastTimestamp = null; // reset clock
+  });
 
   // --- helpers --------------------------------------------------------------
 
@@ -110,7 +238,7 @@
         return { a, b, t };
       }
     }
-    // Beyond Pluto (loop)
+    // Beyond Pluto (clamp to last segment)
     return {
       a: bodies[bodies.length - 2],
       b: bodies[bodies.length - 1],
@@ -147,23 +275,23 @@
 
   // --- layer rendering ------------------------------------------------------
 
-  function drawTopLayer(width, top, height, photonDistanceAu) {
+  function drawTopLayer(ctx, width, height, photonDistanceAu) {
     const marginX = 60;
-    const y = top + height * 0.5;
+    const y = height * 0.5;
     const lineStartX = marginX;
     const lineEndX = width - marginX;
     const spanX = lineEndX - lineStartX;
 
     // background
     ctx.fillStyle = "#050816";
-    ctx.fillRect(0, top, width, height);
+    ctx.fillRect(0, 0, width, height);
 
     // Title
     ctx.fillStyle = "#ddd";
     ctx.font = "14px system-ui";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("Top: Sun → Pluto (distances to scale, light-speed photon)", 16, top + 8);
+    ctx.fillText("Top: Sun → Pluto (distances to scale, light-speed photon)", 16, 8);
 
     // main line
     ctx.strokeStyle = "#444";
@@ -195,37 +323,37 @@
     ctx.textBaseline = "top";
 
     ctx.fillText(
-      `Sim time since leaving Sun: ${formatTime(simTimeSec)}`,
+      `Sim time: ${formatTime(simTimeSec)}`,
       width - 16,
-      top + 8
+      8
     );
     ctx.fillText(
       `Photon distance: ${photonDistanceAu.toFixed(2)} AU`,
       width - 16,
-      top + 26
+      26
     );
     ctx.fillText(
-      `Total Sun→Pluto light time: ${formatTime(maxTravelTimeSec)}`,
+      `Sun→Pluto light time: ${formatTime(maxTravelTimeSec)}`,
       width - 16,
-      top + 44
+      44
     );
   }
 
-  function drawMiddleLayer(width, top, height, photonDistanceAu) {
+  function drawMiddleLayer(ctx, width, height, photonDistanceAu) {
     const marginX = 60;
-    const y = top + height * 0.5;
+    const y = height * 0.5;
     const lineStartX = marginX;
     const lineEndX = width - marginX;
     const spanX = lineEndX - lineStartX;
 
     ctx.fillStyle = "#030311";
-    ctx.fillRect(0, top, width, height);
+    ctx.fillRect(0, 0, width, height);
 
     ctx.fillStyle = "#ddd";
     ctx.font = "14px system-ui";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("Middle: Zoomed current hop (Sun→Mercury, Mercury→Venus, ...)", 16, top + 8);
+    ctx.fillText("Middle: Zoomed current hop (Sun→Mercury, Mercury→Venus, ...)", 16, 8);
 
     const { a, b, t } = findCurrentSegment(photonDistanceAu);
 
@@ -237,7 +365,7 @@
     ctx.lineTo(lineEndX, y);
     ctx.stroke();
 
-    // Draw just endpoints
+    // Draw endpoints
     const leftX = lineStartX;
     const rightX = lineEndX;
 
@@ -265,168 +393,22 @@
     ctx.fillText(
       `Current hop: ${a.name} → ${b.name} (${segDistanceAu.toFixed(2)} AU)`,
       16,
-      top + 28
+      28
     );
     ctx.fillText(
       `Light time for this hop: ${formatTime(segTimeSec)}`,
       16,
-      top + 46
+      46
     );
     ctx.fillText(
       `Progress in this hop: ${(t * 100).toFixed(1)}%`,
       16,
-      top + 64
+      64
     );
+
+    // Also update bottom status line text for current hop
+    hopText.textContent = `${a.name} → ${b.name}`;
   }
-
-  function drawBottomLayer(width, top, height) {
-    controlsState.bottomTop = top;
-    controlsState.bottomHeight = height;
-
-    ctx.fillStyle = "#040b18";
-    ctx.fillRect(0, top, width, height);
-
-    ctx.fillStyle = "#ddd";
-    ctx.font = "14px system-ui";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText("Bottom: Controls", 16, top + 8);
-
-    // Panel box
-    const panelX = 16;
-    const panelY = top + 32;
-    const panelW = width - 32;
-    const panelH = height - 48;
-
-    ctx.fillStyle = "#0b1222";
-    ctx.fillRect(panelX, panelY, panelW, panelH);
-    ctx.strokeStyle = "#333";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(panelX, panelY, panelW, panelH);
-
-    // Buttons
-    const buttonHeight = 34;
-    const buttonSpacing = 16;
-    const buttonWidth = 200;
-
-    const modeBtnX = panelX + 24;
-    const modeBtnY = panelY + 24;
-
-    const restartBtnX = panelX + 24;
-    const restartBtnY = modeBtnY + buttonHeight + buttonSpacing;
-
-    // store hitboxes
-    controlsState.modeButton.x = modeBtnX;
-    controlsState.modeButton.y = modeBtnY;
-    controlsState.modeButton.w = buttonWidth;
-    controlsState.modeButton.h = buttonHeight;
-
-    controlsState.restartButton.x = restartBtnX;
-    controlsState.restartButton.y = restartBtnY;
-    controlsState.restartButton.w = buttonWidth;
-    controlsState.restartButton.h = buttonHeight;
-
-    // Mode button
-    ctx.fillStyle = "#151b33";
-    ctx.fillRect(modeBtnX, modeBtnY, buttonWidth, buttonHeight);
-    ctx.strokeStyle = "#4a5cff";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(modeBtnX, modeBtnY, buttonWidth, buttonHeight);
-
-    ctx.fillStyle = "#eee";
-    ctx.font = "13px system-ui";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const modeLabel = simMode === "simulated"
-      ? "Mode: Simulated (×60)"
-      : "Mode: Real Time (×1)";
-    ctx.fillText(modeLabel, modeBtnX + buttonWidth / 2, modeBtnY + buttonHeight / 2);
-
-    // Restart button
-    ctx.fillStyle = "#151b33";
-    ctx.fillRect(restartBtnX, restartBtnY, buttonWidth, buttonHeight);
-    ctx.strokeStyle = "#ff6666";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(restartBtnX, restartBtnY, buttonWidth, buttonHeight);
-
-    ctx.fillStyle = "#eee";
-    ctx.font = "13px system-ui";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Restart simulation", restartBtnX + buttonWidth / 2, restartBtnY + buttonHeight / 2);
-
-    // Info text on the right
-    ctx.fillStyle = "#ccc";
-    ctx.font = "12px system-ui";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-
-    const infoX = panelX + 24 + buttonWidth + 40;
-    const infoY = panelY + 24;
-
-    ctx.fillText(
-      "Toggle between real time (×1) and accelerated (×60) simulation.",
-      infoX,
-      infoY
-    );
-    ctx.fillText(
-      "Restart sends the photon back to the Sun (t = 0).",
-      infoX,
-      infoY + 20
-    );
-  }
-
-  // --- shared handler for click/touch on canvas controls --------------------
-
-  function handleCanvasInteraction(x, y) {
-    const { modeButton, restartButton } = controlsState;
-
-    function inButton(btn) {
-      return (
-        x >= btn.x && x <= btn.x + btn.w &&
-        y >= btn.y && y <= btn.y + btn.h
-      );
-    }
-
-    if (inButton(modeButton)) {
-      // toggle mode
-      if (simMode === "simulated") {
-        simMode = "real";
-        simSpeed = REAL_TIME_SPEED;
-      } else {
-        simMode = "simulated";
-        simSpeed = FAST_SPEED;
-      }
-      return;
-    }
-
-    if (inButton(restartButton)) {
-      simTimeSec = 0;
-      return;
-    }
-  }
-
-  canvas.addEventListener("click", (event) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    handleCanvasInteraction(x, y);
-  });
-
-  // touch support for iPhone / iPad
-  function handleTouch(event) {
-    event.preventDefault(); // avoid double-tap zoom / scrolling
-    const touch = event.touches[0];
-    if (!touch) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-
-    handleCanvasInteraction(x, y);
-  }
-
-  canvas.addEventListener("touchstart", handleTouch, { passive: false });
 
   // --- main loop ------------------------------------------------------------
 
@@ -445,15 +427,13 @@
     const photonDistanceKm = C_KM_S * simTimeSec;
     const photonDistanceAu = photonDistanceKm / AU_KM;
 
-    const w = canvas.width;
-    const h = canvas.height;
-    const layerHeight = h / 3;
+    // Draw canvases
+    drawTopLayer(topCtx, topCanvas.width, topCanvas.height, photonDistanceAu);
+    drawMiddleLayer(middleCtx, middleCanvas.width, middleCanvas.height, photonDistanceAu);
 
-    ctx.clearRect(0, 0, w, h);
-
-    drawTopLayer(w, 0 * layerHeight, layerHeight, photonDistanceAu);
-    drawMiddleLayer(w, 1 * layerHeight, layerHeight, photonDistanceAu);
-    drawBottomLayer(w, 2 * layerHeight, layerHeight);
+    // Update bottom DOM text
+    simTimeText.textContent = formatTime(simTimeSec);
+    photonDistanceText.textContent = `${photonDistanceAu.toFixed(2)} AU`;
 
     requestAnimationFrame(loop);
   }
