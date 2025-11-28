@@ -15,6 +15,7 @@
       display: block;
       width: 100vw;
       height: 100vh;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -36,7 +37,6 @@
 
   const AU_KM = 149_597_870;
   const C_KM_S = 299_792;   // speed of light in km/s
-  const EARTH_CIRC_KM = 40_075;
 
   // Rough mean distances from Sun, in AU
   const bodies = [
@@ -56,11 +56,25 @@
   const maxDistanceKm = maxDistanceAu * AU_KM;
   const maxTravelTimeSec = maxDistanceKm / C_KM_S; // sun->Pluto at light speed
 
-  // Simulation speed: how many simulated seconds per real second
-  const SIM_SPEED = 60; // 1 real second = 1 simulated minute
+  // --- Simulation speed / mode ---------------------------------------------
+
+  const REAL_TIME_SPEED = 1;   // 1 real second = 1 simulated second
+  const FAST_SPEED      = 60;  // 1 real second = 60 simulated seconds (1 min)
+
+  let simMode  = "simulated";  // "simulated" | "real"
+  let simSpeed = FAST_SPEED;
 
   let simTimeSec = 0;
   let lastTimestamp = null;
+
+  // --- UI control hitboxes (bottom panel) -----------------------------------
+
+  const controlsState = {
+    modeButton: { x: 0, y: 0, w: 0, h: 0 },
+    restartButton: { x: 0, y: 0, w: 0, h: 0 },
+    bottomTop: 0,
+    bottomHeight: 0,
+  };
 
   // --- helpers --------------------------------------------------------------
 
@@ -264,7 +278,10 @@
     );
   }
 
-  function drawBottomLayer(width, top, height, photonDistanceAu) {
+  function drawBottomLayer(width, top, height) {
+    controlsState.bottomTop = top;
+    controlsState.bottomHeight = height;
+
     ctx.fillStyle = "#040b18";
     ctx.fillRect(0, top, width, height);
 
@@ -272,88 +289,122 @@
     ctx.font = "14px system-ui";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("Bottom: Earth-scale context", 16, top + 8);
+    ctx.fillText("Bottom: Controls", 16, top + 8);
 
-    const centerY = top + height * 0.5;
-
-    // 1) How many Earth laps in this time?
-    const lightDistanceKm = C_KM_S * simTimeSec;
-    const laps = lightDistanceKm / EARTH_CIRC_KM;
-
-    // Draw Earth circle
-    const earthX = 120;
-    const earthR = 32;
-    ctx.beginPath();
-    ctx.arc(earthX, centerY, earthR, 0, Math.PI * 2);
-    ctx.fillStyle = "#1b3b8a";
-    ctx.fill();
-
-    ctx.strokeStyle = "#66ff99";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(earthX, centerY, earthR + 4, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = "#eee";
-    ctx.font = "12px system-ui";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Earth", earthX, centerY);
-
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillStyle = "#ccc";
-    ctx.fillText(
-      `Since leaving the Sun, light could have gone around Earth ~${laps.toFixed(1)} times.`,
-      earthX + earthR + 40,
-      centerY - 12
-    );
-    ctx.fillText(
-      `(Earth circumference ≈ ${EARTH_CIRC_KM.toLocaleString()} km)`,
-      earthX + earthR + 40,
-      centerY + 8
-    );
-
-    // 2) Communication delay Earth ↔ current planet
-    // Choose "current planet" as the last body behind the photon
-    let currentPlanet = bodies[0];
-    for (const b of bodies) {
-      if (b.distanceAu <= photonDistanceAu) {
-        currentPlanet = b;
-      }
-    }
-
-    const earthAu = 1.0;
-    const distanceEarthToCurrentAu = Math.abs(currentPlanet.distanceAu - earthAu);
-    const oneWaySec = lightTimeSeconds(distanceEarthToCurrentAu);
-    const roundTripSec = 2 * oneWaySec;
-
-    const boxX = 16;
-    const boxY = top + height - 70;
-    const boxW = width - 32;
-    const boxH = 54;
+    // Panel box
+    const panelX = 16;
+    const panelY = top + 32;
+    const panelW = width - 32;
+    const panelH = height - 48;
 
     ctx.fillStyle = "#0b1222";
-    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.fillRect(panelX, panelY, panelW, panelH);
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 1;
-    ctx.strokeRect(boxX, boxY, boxW, boxH);
+    ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+    // Buttons
+    const buttonHeight = 34;
+    const buttonSpacing = 16;
+    const buttonWidth = 200;
+
+    const modeBtnX = panelX + 24;
+    const modeBtnY = panelY + 24;
+
+    const restartBtnX = panelX + 24;
+    const restartBtnY = modeBtnY + buttonHeight + buttonSpacing;
+
+    // store hitboxes
+    controlsState.modeButton.x = modeBtnX;
+    controlsState.modeButton.y = modeBtnY;
+    controlsState.modeButton.w = buttonWidth;
+    controlsState.modeButton.h = buttonHeight;
+
+    controlsState.restartButton.x = restartBtnX;
+    controlsState.restartButton.y = restartBtnY;
+    controlsState.restartButton.w = buttonWidth;
+    controlsState.restartButton.h = buttonHeight;
+
+    // Mode button
+    ctx.fillStyle = "#151b33";
+    ctx.fillRect(modeBtnX, modeBtnY, buttonWidth, buttonHeight);
+    ctx.strokeStyle = "#4a5cff";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(modeBtnX, modeBtnY, buttonWidth, buttonHeight);
 
     ctx.fillStyle = "#eee";
+    ctx.font = "13px system-ui";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const modeLabel = simMode === "simulated"
+      ? "Mode: Simulated (×60)"
+      : "Mode: Real Time (×1)";
+    ctx.fillText(modeLabel, modeBtnX + buttonWidth / 2, modeBtnY + buttonHeight / 2);
+
+    // Restart button
+    ctx.fillStyle = "#151b33";
+    ctx.fillRect(restartBtnX, restartBtnY, buttonWidth, buttonHeight);
+    ctx.strokeStyle = "#ff6666";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(restartBtnX, restartBtnY, buttonWidth, buttonHeight);
+
+    ctx.fillStyle = "#eee";
+    ctx.font = "13px system-ui";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Restart simulation", restartBtnX + buttonWidth / 2, restartBtnY + buttonHeight / 2);
+
+    // Info text on the right
+    ctx.fillStyle = "#ccc";
     ctx.font = "12px system-ui";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
+
+    const infoX = panelX + 24 + buttonWidth + 40;
+    const infoY = panelY + 24;
+
     ctx.fillText(
-      `If you sent a radio signal from Earth to ${currentPlanet.name} right now:`,
-      boxX + 8,
-      boxY + 6
+      "Click the mode button to toggle between real time (×1) and accelerated (×60) simulation.",
+      infoX,
+      infoY
     );
     ctx.fillText(
-      `• One-way signal time: ${formatTime(oneWaySec)}    • Round-trip (send + reply): ${formatTime(roundTripSec)}`,
-      boxX + 8,
-      boxY + 24
+      "Click 'Restart simulation' to send the photon back to the Sun (t = 0).",
+      infoX,
+      infoY + 20
     );
   }
+
+  // --- click handling for canvas controls -----------------------------------
+
+  canvas.addEventListener("click", (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const { modeButton, restartButton } = controlsState;
+
+    function inButton(btn) {
+      return (
+        x >= btn.x && x <= btn.x + btn.w &&
+        y >= btn.y && y <= btn.y + btn.h
+      );
+    }
+
+    if (inButton(modeButton)) {
+      // toggle mode
+      if (simMode === "simulated") {
+        simMode = "real";
+        simSpeed = REAL_TIME_SPEED;
+      } else {
+        simMode = "simulated";
+        simSpeed = FAST_SPEED;
+      }
+    } else if (inButton(restartButton)) {
+      // restart sim
+      simTimeSec = 0;
+    }
+  });
 
   // --- main loop ------------------------------------------------------------
 
@@ -362,7 +413,7 @@
     const dtReal = (timestamp - lastTimestamp) / 1000; // seconds
     lastTimestamp = timestamp;
 
-    simTimeSec += dtReal * SIM_SPEED;
+    simTimeSec += dtReal * simSpeed;
 
     // Loop when photon passes Pluto
     if (simTimeSec > maxTravelTimeSec) {
@@ -380,7 +431,7 @@
 
     drawTopLayer(w, 0 * layerHeight, layerHeight, photonDistanceAu);
     drawMiddleLayer(w, 1 * layerHeight, layerHeight, photonDistanceAu);
-    drawBottomLayer(w, 2 * layerHeight, layerHeight, photonDistanceAu);
+    drawBottomLayer(w, 2 * layerHeight, layerHeight);
 
     requestAnimationFrame(loop);
   }
