@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>3D Mars with Phobos and Deimos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+      color: #ddd;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+    }
+    #info {
+      position: fixed;
+      left: 0.75rem;
+      bottom: 0.75rem;
+      font-size: 0.8rem;
+      opacity: 0.8;
+      max-width: 320px;
+      line-height: 1.3;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #info code {
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+<div id="info">
+  3D Mars + moons.<br>
+  Drag with one finger (or mouse) to rotate. Scroll wheel to zoom.<br>
+  Distances & Mars radius share one scale (km → scene units).<br>
+  Moon radii exaggerated for visibility.<br><br>
+  Frame:<br>
+  – Y axis = rotation axis (north ↑)<br>
+  – Equatorial plane = X–Z<br>
+</div>
+
+<!-- Three.js (global THREE) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+  // Fail fast if THREE didn't load
+  if (typeof THREE === 'undefined') {
+    document.getElementById('info').innerHTML = 'Failed to load Three.js. Check your network / HTTPS.';
+  } else {
+    // ===== PHYSICAL CONSTANTS (KM, HOURS) =====
+    var MARS_RADIUS_KM   = 3396;
+    var PHOBOS_ORBIT_KM  = 9377;
+    var DEIMOS_ORBIT_KM  = 23460;
+
+    var PHOBOS_PERIOD_H  = 7.66;
+    var DEIMOS_PERIOD_H  = 30.35;
+
+    // ===== SCENE & RENDERER =====
+    var scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+
+    var renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.domElement.style.touchAction = 'none'; // disable default touch gestures
+    document.body.appendChild(renderer.domElement);
+
+    var fov = 45;
+    var aspect = window.innerWidth / window.innerHeight;
+    var near = 0.1;
+    var far  = 1000;
+    var camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.up.set(0, 1, 0); // Y is "north up"
+
+    // ===== SCALE: KM → SCENE UNITS =====
+    var TARGET_DEIMOS_RADIUS_UNITS = 30;
+    var KM_TO_UNIT = TARGET_DEIMOS_RADIUS_UNITS / DEIMOS_ORBIT_KM;
+
+    var marsRadius   = MARS_RADIUS_KM  * KM_TO_UNIT;
+    var phobosOrbit  = PHOBOS_ORBIT_KM * KM_TO_UNIT;
+    var deimosOrbit  = DEIMOS_ORBIT_KM * KM_TO_UNIT;
+
+    var phobosRadius = marsRadius * 0.07; // exaggerated
+    var deimosRadius = marsRadius * 0.05; // exaggerated
+
+    // ===== LIGHTING =====
+    var dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(1, 1, 0.5).normalize();
+    scene.add(dirLight);
+
+    var ambient = new THREE.AmbientLight(0x404040);
+    scene.add(ambient);
+
+    // ===== MARS =====
+    var marsGeom = new THREE.SphereGeometry(marsRadius, 64, 64);
+    var marsMat  = new THREE.MeshPhongMaterial({
+      color: 0xcc6633,
+      shininess: 12
+    });
+    var mars = new THREE.Mesh(marsGeom, marsMat);
+    scene.add(mars);
+
+    // Rotation axis (Y) line
+    var axisLength = marsRadius * 2.0;
+    var axisGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -axisLength, 0),
+      new THREE.Vector3(0,  axisLength, 0)
+    ]);
+    var axisMat = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.4
+    });
+    var axisLine = new THREE.Line(axisGeom, axisMat);
+    scene.add(axisLine);
+
+    // North marker
+    var northMarkerGeom = new THREE.SphereGeometry(marsRadius * 0.05, 16, 16);
+    var northMarkerMat  = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    var northMarker = new THREE.Mesh(northMarkerGeom, northMarkerMat);
+    northMarker.position.set(0, axisLength * 1.05, 0);
+    scene.add(northMarker);
+
+    // ===== ORBIT PATHS (X–Z PLANE) =====
+    function createOrbitCircle(radius, color, segments, opacity) {
+      if (segments === undefined) segments = 256;
+      if (opacity === undefined) opacity = 0.25;
+
+      var pts = [];
+      for (var i = 0; i <= segments; i++) {
+        var theta = (i / segments) * Math.PI * 2;
+        var x = radius * Math.cos(theta);
+        var z = radius * Math.sin(theta);
+        pts.push(new THREE.Vector3(x, 0, z));
+      }
+      var geom = new THREE.BufferGeometry().setFromPoints(pts);
+      var mat = new THREE.LineBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: opacity
+      });
+      return new THREE.LineLoop(geom, mat);
+    }
+
+    var phobosOrbitLine = createOrbitCircle(phobosOrbit, 0xffffff, 256, 0.4);
+    var deimosOrbitLine = createOrbitCircle(deimosOrbit, 0x888888, 256, 0.25);
+    scene.add(phobosOrbitLine);
+    scene.add(deimosOrbitLine);
+
+    // ===== MOONS =====
+    var phobosGeom = new THREE.SphereGeometry(phobosRadius, 32, 32);
+    var phobosMat  = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+    var phobos     = new THREE.Mesh(phobosGeom, phobosMat);
+    scene.add(phobos);
+
+    var deimosGeom = new THREE.SphereGeometry(deimosRadius, 32, 32);
+    var deimosMat  = new THREE.MeshPhongMaterial({ color: 0x999999 });
+    var deimos     = new THREE.Mesh(deimosGeom, deimosMat);
+    scene.add(deimos);
+
+    // ===== CAMERA ORBIT (MANUAL CONTROLS) =====
+    // Spherical coordinates: radius r, polar angle phi (0 = north pole), azimuth theta.
+    var cameraRadiusMin = marsRadius * 1.8;
+    var cameraRadiusMax = deimosOrbit * 5.0;
+    var cameraRadius    = deimosOrbit * 3.0;
+
+    var cameraTheta = Math.PI / 4;  // azimuth (around Y)
+    var cameraPhi   = Math.PI / 3;  // polar (from +Y)
+
+    function clamp(value, min, max) {
+      return value < min ? min : (value > max ? max : value);
+    }
+
+    function updateCameraPosition() {
+      // Spherical to Cartesian, Y-up
+      var x = cameraRadius * Math.sin(cameraPhi) * Math.cos(cameraTheta);
+      var z = cameraRadius * Math.sin(cameraPhi) * Math.sin(cameraTheta);
+      var y = cameraRadius * Math.cos(cameraPhi);
+      camera.position.set(x, y, z);
+      camera.lookAt(0, 0, 0);
+    }
+
+    updateCameraPosition();
+
+    // Mouse drag rotation
+    var isDragging = false;
+    var lastX = 0;
+    var lastY = 0;
+
+    function onMouseDown(e) {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    }
+
+    function onMouseMove(e) {
+      if (!isDragging) return;
+      var dx = e.clientX - lastX;
+      var dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      var ROT_SPEED = 0.005;
+      cameraTheta += dx * ROT_SPEED;
+      cameraPhi   += dy * ROT_SPEED;
+
+      cameraPhi = clamp(cameraPhi, 0.1, Math.PI / 2.1); // stay above equator
+      updateCameraPosition();
+    }
+
+    function onMouseUp() {
+      isDragging = false;
+    }
+
+    renderer.domElement.addEventListener('mousedown', onMouseDown, false);
+    window.addEventListener('mousemove', onMouseMove, false);
+    window.addEventListener('mouseup', onMouseUp, false);
+
+    // Touch drag rotation (single finger)
+    var touchDragging = false;
+    var lastTouchX = 0;
+    var lastTouchY = 0;
+
+    function getTouchPos(e) {
+      var t = e.touches[0];
+      return { x: t.clientX, y: t.clientY };
+    }
+
+    renderer.domElement.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        touchDragging = true;
+        var pos = getTouchPos(e);
+        lastTouchX = pos.x;
+        lastTouchY = pos.y;
+      }
+    }, false);
+
+    renderer.domElement.addEventListener('touchmove', function(e) {
+      if (!touchDragging || e.touches.length !== 1) return;
+      e.preventDefault(); // prevent page scroll
+
+      var pos = getTouchPos(e);
+      var dx = pos.x - lastTouchX;
+      var dy = pos.y - lastTouchY;
+      lastTouchX = pos.x;
+      lastTouchY = pos.y;
+
+      var ROT_SPEED = 0.005;
+      cameraTheta += dx * ROT_SPEED;
+      cameraPhi   += dy * ROT_SPEED;
+
+      cameraPhi = clamp(cameraPhi, 0.1, Math.PI / 2.1);
+      updateCameraPosition();
+    }, { passive: false });
+
+    renderer.domElement.addEventListener('touchend', function(e) {
+      if (e.touches.length === 0) {
+        touchDragging = false;
+      }
+    }, false);
+
+    // Mouse wheel zoom (desktop)
+    renderer.domElement.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      var delta = e.deltaY || e.wheelDelta || 0;
+      var zoomFactor = 1 + (delta * 0.001);
+      cameraRadius *= zoomFactor;
+      cameraRadius = clamp(cameraRadius, cameraRadiusMin, cameraRadiusMax);
+      updateCameraPosition();
+    }, { passive: false });
+
+    // ===== TIME & ORBITS =====
+    var PHOBOS_PERIOD_SIM_SEC = 5.0;
+    var HOURS_PER_SIM_SECOND  = PHOBOS_PERIOD_H / PHOBOS_PERIOD_SIM_SEC;
+    var DEIMOS_PERIOD_SIM_SEC = DEIMOS_PERIOD_H / HOURS_PER_SIM_SECOND;
+
+    var PHOBOS_ANG_VEL = (2 * Math.PI) / PHOBOS_PERIOD_SIM_SEC;
+    var DEIMOS_ANG_VEL = (2 * Math.PI) / DEIMOS_PERIOD_SIM_SEC;
+
+    var startTime = Date.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      var tSec = (Date.now() - startTime) / 1000;
+
+      var thetaP = PHOBOS_ANG_VEL * tSec;
+      var thetaD = DEIMOS_ANG_VEL * tSec;
+
+      phobos.position.set(
+        phobosOrbit * Math.cos(thetaP),
+        0,
+        phobosOrbit * Math.sin(thetaP)
+      );
+
+      deimos.position.set(
+        deimosOrbit * Math.cos(thetaD),
+        0,
+        deimosOrbit * Math.sin(thetaD)
+      );
+
+      // Slow Mars rotation about axis
+      mars.rotation.y += 0.002;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // ===== RESIZE HANDLING =====
+    window.addEventListener('resize', function () {
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }, false);
+  }
+</script>
+</body>
+</html>
