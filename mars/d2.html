@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>3D Mars with Phobos and Deimos (Touch Orbit)</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+      color: #ddd;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+    }
+    #info {
+      position: fixed;
+      left: 0.75rem;
+      bottom: 0.75rem;
+      font-size: 0.8rem;
+      opacity: 0.8;
+      max-width: 320px;
+      line-height: 1.3;
+      pointer-events: none;
+    }
+    #info code {
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+<div id="info">
+  3D Mars + moons (touch/drag to orbit, pinch to zoom).<br>
+  Distances & Mars radius share one scale (km → scene units).<br>
+  Moon radii exaggerated for visibility.<br><br>
+  Frame:<br>
+  – Y axis = rotation axis (north ↑)<br>
+  – Equatorial plane = X–Z<br>
+</div>
+
+<script type="module">
+  import * as THREE from 'https://unpkg.com/three@0.165.0/build/three.module.js';
+  import { OrbitControls } from 'https://unpkg.com/three@0.165.0/examples/jsm/controls/OrbitControls.js';
+
+  // ===== PHYSICAL CONSTANTS (KM, HOURS) =====
+  const MARS_RADIUS_KM   = 3396;
+  const PHOBOS_ORBIT_KM  = 9377;
+  const DEIMOS_ORBIT_KM  = 23460;
+
+  const PHOBOS_PERIOD_H  = 7.66;
+  const DEIMOS_PERIOD_H  = 30.35;
+
+  // ===== SCENE & RENDERER =====
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const fov = 45;
+  const aspect = window.innerWidth / window.innerHeight;
+  const near = 0.1;
+  const far  = 1000;
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+
+  // Keep north "up" on screen
+  camera.up.set(0, 1, 0);
+
+  // ===== SCALE: KM → SCENE UNITS =====
+  const TARGET_DEIMOS_RADIUS_UNITS = 30;
+  const KM_TO_UNIT = TARGET_DEIMOS_RADIUS_UNITS / DEIMOS_ORBIT_KM;
+
+  const marsRadius   = MARS_RADIUS_KM  * KM_TO_UNIT;
+  const phobosOrbit  = PHOBOS_ORBIT_KM * KM_TO_UNIT;
+  const deimosOrbit  = DEIMOS_ORBIT_KM * KM_TO_UNIT;
+
+  const phobosRadius = marsRadius * 0.07;
+  const deimosRadius = marsRadius * 0.05;
+
+  // ===== LIGHTING =====
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  dirLight.position.set(1, 1, 0.5).normalize();
+  scene.add(dirLight);
+
+  const ambient = new THREE.AmbientLight(0x404040);
+  scene.add(ambient);
+
+  // ===== MARS =====
+  const marsGeom = new THREE.SphereGeometry(marsRadius, 64, 64);
+  const marsMat  = new THREE.MeshPhongMaterial({
+    color: 0xcc6633,
+    shininess: 12
+  });
+  const mars = new THREE.Mesh(marsGeom, marsMat);
+  scene.add(mars);
+
+  // Rotation axis (Y) line
+  const axisLength = marsRadius * 2.0;
+  const axisGeom = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, -axisLength, 0),
+    new THREE.Vector3(0,  axisLength, 0)
+  ]);
+  const axisMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
+  const axisLine = new THREE.Line(axisGeom, axisMat);
+  scene.add(axisLine);
+
+  // North marker
+  const northMarkerGeom = new THREE.SphereGeometry(marsRadius * 0.05, 16, 16);
+  const northMarkerMat  = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const northMarker = new THREE.Mesh(northMarkerGeom, northMarkerMat);
+  northMarker.position.set(0, axisLength * 1.05, 0);
+  scene.add(northMarker);
+
+  // ===== ORBIT PATHS (X–Z PLANE) =====
+  function createOrbitCircle(radius, color, segments = 256, opacity = 0.25) {
+    const pts = [];
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      const x = radius * Math.cos(theta);
+      const z = radius * Math.sin(theta);
+      pts.push(new THREE.Vector3(x, 0, z));
+    }
+    const geom = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity
+    });
+    return new THREE.LineLoop(geom, mat);
+  }
+
+  const phobosOrbitLine = createOrbitCircle(phobosOrbit, 0xffffff, 256, 0.4);
+  const deimosOrbitLine = createOrbitCircle(deimosOrbit, 0x888888, 256, 0.25);
+  scene.add(phobosOrbitLine);
+  scene.add(deimosOrbitLine);
+
+  // ===== MOONS =====
+  const phobosGeom = new THREE.SphereGeometry(phobosRadius, 32, 32);
+  const phobosMat  = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+  const phobos     = new THREE.Mesh(phobosGeom, phobosMat);
+  scene.add(phobos);
+
+  const deimosGeom = new THREE.SphereGeometry(deimosRadius, 32, 32);
+  const deimosMat  = new THREE.MeshPhongMaterial({ color: 0x999999 });
+  const deimos     = new THREE.Mesh(deimosGeom, deimosMat);
+  scene.add(deimos);
+
+  // ===== CAMERA POSITION =====
+  const cameraDistance = deimosOrbit * 3.0;
+  const cameraHeight   = cameraDistance * 0.6;
+
+  camera.position.set(0, cameraHeight, cameraDistance);
+  camera.lookAt(0, 0, 0);
+
+  // ===== ORBIT CONTROLS (TOUCH / MOUSE) =====
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+
+  controls.enablePan = false; // keep Mars centered
+  controls.minDistance = marsRadius * 1.8;
+  controls.maxDistance = deimosOrbit * 5.0;
+
+  // Keep camera in northern hemisphere and prevent flipping:
+  controls.minPolarAngle = 0.1;                 // don't look exactly from the pole
+  controls.maxPolarAngle = Math.PI / 2.1;       // stay above equatorial plane
+  // North remains "up" because camera.up is fixed to (0,1,0) and controls don't roll.
+
+  // ===== TIME & ORBITS =====
+  const PHOBOS_PERIOD_SIM_SEC = 5.0;
+  const HOURS_PER_SIM_SECOND  = PHOBOS_PERIOD_H / PHOBOS_PERIOD_SIM_SEC;
+  const DEIMOS_PERIOD_SIM_SEC = DEIMOS_PERIOD_H / HOURS_PER_SIM_SECOND;
+
+  const PHOBOS_ANG_VEL = (2 * Math.PI) / PHOBOS_PERIOD_SIM_SEC;
+  const DEIMOS_ANG_VEL = (2 * Math.PI) / DEIMOS_PERIOD_SIM_SEC;
+
+  let startTime = performance.now();
+
+  // ===== ANIMATION LOOP =====
+  function animate(now) {
+    requestAnimationFrame(animate);
+
+    const tSec = (now - startTime) / 1000;
+
+    const thetaP = PHOBOS_ANG_VEL * tSec;
+    const thetaD = DEIMOS_ANG_VEL * tSec;
+
+    phobos.position.set(
+      phobosOrbit * Math.cos(thetaP),
+      0,
+      phobosOrbit * Math.sin(thetaP)
+    );
+
+    deimos.position.set(
+      deimosOrbit * Math.cos(thetaD),
+      0,
+      deimosOrbit * Math.sin(thetaD)
+    );
+
+    // Slow Mars rotation about its axis
+    mars.rotation.y += 0.002;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  animate(performance.now());
+
+  // ===== RESIZE HANDLING =====
+  window.addEventListener('resize', () => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+</script>
+</body>
+</html>
