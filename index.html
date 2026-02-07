@@ -1,15 +1,16 @@
 <!doctype html>
 <html lang="en-US">
 <head>
-	<link rel="preconnect" href="https://fonts.gstatic.com">
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-	<meta name="viewport" content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<meta charset="utf-8">
+	<meta name="viewport" content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0">
 	<title>Clint on Git</title>
 	<meta name="description" content="">
 	<meta name="keywords" content="">
 	<link rel="shortcut icon" href="/favicon.ico">
 	<link rel="icon" href="/favicon.ico">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Patua+One&display=swap" rel="stylesheet">
 	<style type="text/css">
     body             { margin: 0; font-family: 'Patua One', sans-serif; color:#202020; background-color: #FF3368; min-width:320px; }
     header           { padding: 50px; text-align: center; border-bottom: 1px solid #ccc; background-color: #f29a16; }
@@ -34,11 +35,14 @@
       <div class="inner">
         <div style="text-align: center">
           <figure class="hero">
-            <a href="castform.png" target="_blank">
-              <img src="castform-min.png" width="400" height="600" alt="Castform">
+            <a href="castform.png" target="_blank" rel="noopener noreferrer">
+              <img src="castform-min.png"
+                   srcset="castform-min.png 400w, castform.png 1368w"
+                   sizes="(max-width: 480px) 320px, (max-width: 768px) 400px, 400px"
+                   width="400" height="600" alt="Castform" loading="lazy" decoding="async">
             </a>
             <figcaption>
-              Digital vector hand-redrawn via trace, original by <a href="https://nara-lalana.com/" target="_blank">Narano</a> (ならの)
+              Digital vector hand-redrawn via trace, original by <a href="https://nara-lalana.com/" target="_blank" rel="noopener noreferrer">Narano</a> (ならの)
             </figcaption>
           </figure>
         </div>
@@ -63,7 +67,7 @@
             	<li>Local storage with versioning for the data set. There's no need to fetch it again if it's not updated.</li>
 				      <li>Custom PHP thumbnailing creates optimized thumbnails and large-sized specimen photos</li>
           	</ul>
-          	<a href="https://fossil.15656.com/catalog/">View the Fossil Catalog</a><br>
+          <a href="https://fossil.15656.com/catalog/">View the Fossil Catalog</a><br>
         </div>
         <div class="shareable">
           <h3>Temporal Range Chart Generator</h3>
@@ -129,13 +133,12 @@
     <footer>
       <div class="inner">
 	      © 2026 Clinton N. Godlesky | 
-	      <a href="https://fossil.15656.com/" target="_blank" style="color:#fff;">Paleontology Writing</a></div>
+	      <a href="https://fossil.15656.com/" target="_blank" rel="noopener noreferrer" style="color:#fff;">Paleontology Writing</a></div>
     </footer>
   </div>
 </div>
 <!--
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 -->
-<link href="https://fonts.googleapis.com/css2?family=Patua+One&display=swap" rel="stylesheet">
 </body>
 </html>
