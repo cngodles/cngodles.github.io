@@ -107,9 +107,13 @@
     }
   </script>
   <style type="text/css">
-    body             { margin: 0; font-family: 'Patua One', sans-serif; color:#202020; background-color: #FF3368; min-width:320px; }
-    header           { padding: 50px; text-align: center; border-bottom: 1px solid #ccc; background-color: #f29a16; }
+    body             { margin: 0; font-family: 'Patua One', sans-serif; color:#202020; background-color: #f29a16; min-width:320px; }
+    header           { padding: 50px; text-align: center; border-bottom: 1px solid #333; background-color: #f29a16; }
     header h1        { font-size: 50px; font-weight:400; margin: 0; padding: 0; }
+    @media (max-width: 600px) {
+      header         { padding: 25px; }
+      header h1      { font-size: 32px; }
+    }
     main             { display:block; padding: 30px; background-color: #fff; border-bottom: 1px solid #ccc; }
     .inner           { margin: 0 auto; max-width: 960px;  }
     figure.hero      { max-width: 100%; }
