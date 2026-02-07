@@ -1,144 +1,241 @@
 <!doctype html>
 <html lang="en-US">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0">
-	<title>Clint on Git</title>
-	<meta name="description" content="">
-	<meta name="keywords" content="">
-	<link rel="shortcut icon" href="/favicon.ico">
-	<link rel="icon" href="/favicon.ico">
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Patua+One&display=swap" rel="stylesheet">
-	<style type="text/css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0">
+  <title>Clint on Git</title>
+  <meta name="description" content="">
+  <meta name="keywords" content="">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Patua+One&display=swap" rel="stylesheet">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Clint on Git",
+      "url": "https://cngodles.github.io/",
+      "description": "Personal developer homepage showcasing projects and art.",
+      "author": {
+        "@type": "Person",
+        "name": "Clinton N. Godlesky",
+        "url": "https://cngodles.github.io/",
+        "sameAs": [
+          "https://www.pittpokeresearch.com/",
+          "https://fossil.15656.com/"
+        ]
+      },
+      "mainEntity": {
+        "@type": "ItemList",
+        "name": "Featured Projects",
+        "itemListOrder": "https://schema.org/ItemListOrderAscending",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "item": {
+              "@type": "CreativeWork",
+              "name": "Fossils of Parks Township - Catalog",
+              "url": "https://fossil.15656.com/catalog/",
+              "description": "Interactive specimen catalog with optimized browsing."
+            }
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "item": {
+              "@type": "CreativeWork",
+              "name": "Temporal Range Chart Generator",
+              "url": "https://cngodles.github.io/temporal-range/",
+              "description": "Canvas-based tool for geologic time range charts."
+            }
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "item": {
+              "@type": "CreativeWork",
+              "name": "Pitt PokeResearch",
+              "url": "https://www.pittpokeresearch.com/",
+              "description": "Pokemon TCG pricing and collection tools."
+            }
+          },
+          {
+            "@type": "ListItem",
+            "position": 4,
+            "item": {
+              "@type": "CreativeWork",
+              "name": "Orbits",
+              "url": "https://cngodles.github.io/orbits/index.html",
+              "description": "Scaled orbit animation experiment."
+            }
+          },
+          {
+            "@type": "ListItem",
+            "position": 5,
+            "item": {
+              "@type": "CreativeWork",
+              "name": "The Speed of Light",
+              "url": "https://cngodles.github.io/lightspeed/",
+              "description": "Real-time scaled visualization of light across the solar system."
+            }
+          },
+          {
+            "@type": "ListItem",
+            "position": 6,
+            "item": {
+              "@type": "CreativeWork",
+              "name": "Planets",
+              "url": "https://cngodles.github.io/planets/index.html",
+              "description": "Relative size conversion tool for scale modeling."
+            }
+          },
+          {
+            "@type": "ListItem",
+            "position": 7,
+            "item": {
+              "@type": "CreativeWork",
+              "name": "Time Dilation",
+              "url": "https://cngodles.github.io/time-dilation/index.html",
+              "description": "Time dilation calculator."
+            }
+          }
+        ]
+      }
+    }
+  </script>
+  <style type="text/css">
     body             { margin: 0; font-family: 'Patua One', sans-serif; color:#202020; background-color: #FF3368; min-width:320px; }
     header           { padding: 50px; text-align: center; border-bottom: 1px solid #ccc; background-color: #f29a16; }
-		header h1 			 { font-size: 50px; font-weight:400; margin: 0; padding: 0; }
+    header h1        { font-size: 50px; font-weight:400; margin: 0; padding: 0; }
     main             { display:block; padding: 30px; background-color: #fff; border-bottom: 1px solid #ccc; }
     .inner           { margin: 0 auto; max-width: 960px;  }
     figure.hero      { max-width: 100%; }
     figure.hero img  { display: block; aspect-ratio: 2/3; max-width: 100%; height: auto; margin: 0 auto; }
+    .centered        { text-align: center; }
+    .section-title   { font-size: 2rem; }
     .shareable       { border-top:1px solid #eee; padding: 40px 0; }
     .shareable:first-of-type    { border-top:none; }
     .shareable h3    { font-size:24px; margin: 0; padding: 0 0 10px 0; }
     .shareable a     { color:#3368ff; }
+    .footer-link     { color:#fff; }
     footer           { padding: 30px; text-align: center; font-size: 14px; color:#fff; }
-
   </style>
 </head>
 <body>
-<div id="siteframe">
-  <div id="wrapper">
-		<header><h1>Clint / cngodles</h1></header>
-    <main>
-      <div class="inner">
-        <div style="text-align: center">
-          <figure class="hero">
-            <a href="castform.png" target="_blank" rel="noopener noreferrer">
-              <img src="castform-min.png"
-                   srcset="castform-min.png 400w, castform.png 1368w"
-                   sizes="(max-width: 480px) 320px, (max-width: 768px) 400px, 400px"
-                   width="400" height="600" alt="Castform" loading="lazy" decoding="async">
-            </a>
-            <figcaption>
-              Digital vector hand-redrawn via trace, original by <a href="https://nara-lalana.com/" target="_blank" rel="noopener noreferrer">Narano</a> (ならの)
-            </figcaption>
-          </figure>
+  <div id="siteframe">
+    <div id="wrapper">
+      <header><h1>Clint / cngodles</h1></header>
+      <main>
+        <div class="inner">
+          <div class="centered">
+            <figure class="hero">
+              <a href="castform.png" target="_blank" rel="noopener noreferrer">
+                <img src="castform-min.png"
+                     srcset="castform-min.png 400w, castform.png 1368w"
+                     sizes="(max-width: 480px) 320px, (max-width: 768px) 400px, 400px"
+                     width="400" height="600" alt="Castform" loading="lazy" decoding="async">
+              </a>
+              <figcaption>
+                Digital vector hand-redrawn via trace, original by <a href="https://nara-lalana.com/" target="_blank" rel="noopener noreferrer">Narano</a> (ならの)
+              </figcaption>
+            </figure>
+          </div>
+          <h2 class="section-title">Recent Projects</h2>
+          <p>These are small personal experimental development projects.</p>
+          <div class="shareable">
+            <h3>Pokemon Gym Leader Challenge</h3>
+            <p>Event auxillary scorekeeping.</p>
+            <ul>
+              <li>Season, Event, and Player tracking.</li>
+              <li>Public-facing scoreboard for player review.</li>
+              <li>Simple administration panels and login system.</li>
+            </ul>
+            <p>Private URL</p><br>
+          </div>
+          <div class="shareable">
+            <h3>Fossils of Parks Township - Catalog</h3>
+            <p>An interactive specimen catalog. It uses several things to speed up loading and consumption. Lazy-loaded photos, browser history objects, and local data storage all help achieve quick initial and return visit loading.</p>
+            <ul>
+              <li>Interactive search filtering. Parses data in the browser.</li>
+              <li>Return links for searches, modal pages, and specimen pages.</li>
+              <li>Local storage with versioning for the data set. There's no need to fetch it again if it's not updated.</li>
+              <li>Custom PHP thumbnailing creates optimized thumbnails and large-sized specimen photos</li>
+            </ul>
+            <a href="https://fossil.15656.com/catalog/">View the Fossil Catalog</a><br>
+          </div>
+          <div class="shareable">
+            <h3>Temporal Range Chart Generator</h3>
+            <p>This tool creates temporal range charts within geologic time. The result is drawn using canvas.</p>
+            <ul>
+              <li>Ability to add a creature and show its place on the timeline</li>
+              <li>Timeline is generated using the canvas element.</li>
+              <li>Future upgrades include multiple creatures and saved data using local storage.</li>
+            </ul>
+            <a href="/temporal-range/">Create a Temporal Range</a><br>
+          </div>
+          <div class="shareable">
+            <h3>Pitt PokeResearch</h3>
+            <p>Online shiny/lucky Pokémon list and React Native App. It also provides market pricing for Pokémon TCG packs and particular chase cards.</p>
+            <ul>
+              <li>Data Linked to Google Accounts</li>
+              <li>Lucky/Shiny Personal List</li>
+              <li>English Pokémon TCG Unopened Packs, Booster Boxes, and Elite Trainer Box Prices</li>
+              <li>English Pokémon TCG Chase Card Prices</li>
+              <li>Japanese Pokémon TCG Unopened Packs and Booster Boxes prices</li>
+              <li>Native Mapping App has been retired</li>
+            </ul>
+            <a href="https://www.pittpokeresearch.com/">pittpokeresearch.com</a><br>
+          </div>
+          <div class="shareable">
+            <h3>Orbits</h3>
+            <p>An exploration of CSS animation and JS using scaled orbit speeds and planet sizes.</p>
+            <p>Current working scales are:</p>
+            <ul>
+              <li>Orbit Speed: 20 seconds per 1 earth year.</li>
+              <li>Sun Size: 80,000KM per pixel.</li>
+              <li>Planet Size: 1,000KM per pixel.</li>
+              <li>Orbit Size: 300,000KM per pixel.</li>
+            </ul>
+            <a href="/orbits/index.html">Launch Orbit</a>
+          </div>
+          <div class="shareable">
+            <h3>The Speed of Light</h3>
+            <p>A real-time scaled demonstration of the speed of light. Watch as a beam of light travels across the solar system.</p>
+            <a href="/lightspeed/">Launch Lightspeed</a>
+          </div>
+          <div class="shareable">
+            <h3>Planets</h3>
+            <p>A relative size conversion tool. Measures one object and converts it for the rest. For example, if the Sun were set to 1000cm, the Earth would be 9.16cm, and the orbit of Earth around the sun would be 214942.53cm if building a scale model.</p>
+            <a href="/planets/index.html">Make a scale model</a>
+          </div>
+          <div class="shareable">
+            <h3>Time Dilation</h3>
+            <p>Calculator for showing time dilation. Enter a length of time and a percent speed of light
+            to get a relative time passage number.</p>
+            <a href="/time-dilation/index.html">Travel to the future</a>
+          </div>
+          <div class="shareable">
+            <h3>Websites To Visit</h3>
+            <ul>
+              <li><a href="https://www.taniarascia.com/" rel="nofollow">Tania Rascia</a></li>
+              <li><a href="https://thadbloom.com/" rel="nofollow">Thad Bloom</a></li>
+            </ul>
+            <p>These are two of my favorite web developers. They have great content and are very approachable.</p>
+          </div>
         </div>
-		<h2 style="font-size:2rem;">Recent Projects</h2>
-		<p>These are small personal experimental development projects.</p>
-        <div class="shareable">
-        	<h3>Pokemon Gym Leader Challenge</h3>
-          	<p>Event auxillary scorekeeping.</p>
-          	<ul>
-            	<li>Season, Event, and Player tracking.</li>
-            	<li>Public-facing scoreboard for player review.</li>
-            	<li>Simple administration panels and login system.</li>
-          	</ul>
-          	<p>Private URL</p><br>
-        </div>
-		    <div class="shareable">
-        	<h3>Fossils of Parks Township - Catalog</h3>
-          	<p>An interactive specimen catalog. It uses several things to speed up loading and consumption. Lazy-loaded photos, browser history objects, and local data storage all help achieve quick initial and return visit loading.</p>
-          	<ul>
-            	<li>Interactive search filtering. Parses data in the browser.</li>
-            	<li>Return links for searches, modal pages, and specimen pages.</li>
-            	<li>Local storage with versioning for the data set. There's no need to fetch it again if it's not updated.</li>
-				      <li>Custom PHP thumbnailing creates optimized thumbnails and large-sized specimen photos</li>
-          	</ul>
-          <a href="https://fossil.15656.com/catalog/">View the Fossil Catalog</a><br>
-        </div>
-        <div class="shareable">
-          <h3>Temporal Range Chart Generator</h3>
-          <p>This tool creates temporal range charts within geologic time. The result is drawn using canvas.</p>
-          <ul>
-            <li>Ability to add a creature and show its place on the timeline</li>
-            <li>Timeline is generated using the canvas element.</li>
-            <li>Future upgrades include multiple creatures and saved data using local storage.</li>
-          </ul>
-          <a href="/temporal-range/">Create a Temporal Range</a><br>
-        </div>
-        <div class="shareable">
-          <h3>Pitt PokeResearch</h3>
-          <p>Online shiny/lucky Pokémon list and React Native App. It also provides market pricing for Pokémon TCG packs and particular chase cards.</p>
-          <ul>
-            <li>Data Linked to Google Accounts</li>
-            <li>Lucky/Shiny Personal List</li>
-		  	    <li>English Pokémon TCG Unopened Packs, Booster Boxes, and Elite Trainer Box Prices</li>
-		  	    <li>English Pokémon TCG Chase Card Prices</li>
-		  	    <li>Japanese Pokémon TCG Unopened Packs and Booster Boxes prices</li>
-            <li>Native Mapping App has been retired</li>
-          </ul>
-          <a href="https://www.pittpokeresearch.com/">pittpokeresearch.com</a><br>
-        </div>
-		    <div class="shareable">
-          <h3>Orbits</h3>
-          <p>An exploration of CSS animation and JS using scaled orbit speeds and planet sizes.</p>
-          <p>Current working scales are:</p>
-          <ul>
-            <li>Orbit Speed: 20 seconds per 1 earth year.</li>
-            <li>Sun Size: 80,000KM per pixel.</li>
-            <li>Planet Size: 1,000KM per pixel.</li>
-            <li>Orbit Size: 300,000KM per pixel.</li>
-          </ul>
-          <a href="/orbits/index.html">Launch Orbit</a>
-        </div>
-		    <div class="shareable">
-          <h3>The Speed of Light</h3>
-          <p>A real-time scaled demonstration of the speed of light. Watch as a beam of light travels across the solar system.</p>
-          <a href="/lightspeed/">Launch Lightspeed</a>
-        </div>
-        <div class="shareable">
-          <h3>Planets</h3>
-          <p>A relative size conversion tool. Measures one object and converts it for the rest. For example, if the Sun were set to 1000cm, the Earth would be 9.16cm, and the orbit of Earth around the sun would be 214942.53cm if building a scale model.</p>
-          <a href="/planets/index.html">Make a scale model</a>
-        </div>
-        <div class="shareable">
-          <h3>Time Dilation</h3>
-          <p>Calculator for showing time dilation. Enter a length of time and a percent speed of light
-          to get a relative time passage number.</p>
-          <a href="/time-dilation/index.html">Travel to the future</a>
-        </div>
-	      <div class="shareable">
-          <h3>Websites To Visit</h3>
-          <ul>
-            <li><a href="https://www.taniarascia.com/" rel="nofollow">Tania Rascia</a></li>
-            <li><a href="https://thadbloom.com/" rel="nofollow">Thad Bloom</a></li>
-          </ul>
-          <p>These are two of my favorite web developers. They have great content and are very approachable.</p>
-        </div>
-      </div>
-    </main>
-    <footer>
-      <div class="inner">
-	      © 2026 Clinton N. Godlesky | 
-	      <a href="https://fossil.15656.com/" target="_blank" rel="noopener noreferrer" style="color:#fff;">Paleontology Writing</a></div>
-    </footer>
+      </main>
+      <footer>
+        <div class="inner">
+          © 2026 Clinton N. Godlesky | 
+          <a href="https://fossil.15656.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Paleontology Writing</a></div>
+      </footer>
+    </div>
   </div>
-</div>
-<!--
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
--->
+  <!--
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  -->
 </body>
 </html>
