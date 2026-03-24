@@ -33,48 +33,45 @@
         <div id="result">...</div>
         <p class="about">Add number of years in first field, add in a percentage speed of light in the second, and get a result that is the number of years that would pass for the person going that speed.</p>
     </div>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script>window.jQuery || document.write('<script src="js/jquery-3.3.1.min.js">\x3C/script>')</script>
     <script type="text/javascript">
-        function go(){
-          $("#result").html("working...");
-          var light = 299792458;
-          var speed = 100000;
-          var light = 100;
-          if(isNaN(parseFloat($("#year").val()))){
-            $("#year").val('');
-            $("#result").html("Enter Years.");
-            return false;
+        function go() {
+          const result = document.getElementById("result");
+          const yearInput = document.getElementById("year");
+          const percentInput = document.getElementById("percent");
+          const light = 100;
+
+          if (isNaN(parseFloat(yearInput.value))) {
+            yearInput.value = '';
+            result.textContent = "Enter Years.";
+            return;
           }
-          if(isNaN(parseFloat($("#percent").val()))){
-            $("#percent").val('');
-            $("#result").html("Enter Speed.");
-            return false;
+          if (isNaN(parseFloat(percentInput.value))) {
+            percentInput.value = '';
+            result.textContent = "Enter Speed.";
+            return;
           }
-          if($("#percent").val() > 100){
-            $("#result").html("Instant.");
-            return false; 
+          if (percentInput.value > 100) {
+            result.textContent = "Instant.";
+            return;
           }
-          var speed = parseFloat($("#percent").val());
-          var subject = parseFloat($("#year").val())
-          if(speed > 100){
-            speed = 100;
-          } else if(speed < 0){
-            speed = 0;
-          }
-          var c2 = Math.pow(light, 2);
-          var v2 = Math.pow(speed, 2);
-          var squareme = 1-v2/c2;
-          var dilated = (subject * Math.sqrt(squareme)).toFixed(5);
-          $("#result").html(dilated+" Years");
+
+          let speed = parseFloat(percentInput.value);
+          const subject = parseFloat(yearInput.value);
+
+          if (speed > 100) speed = 100;
+          else if (speed < 0) speed = 0;
+
+          const c2 = Math.pow(light, 2);
+          const v2 = Math.pow(speed, 2);
+          const dilated = (subject * Math.sqrt(1 - v2 / c2)).toFixed(5);
+          result.textContent = dilated + " Years";
         }
 
-        $(document)
-        .ready(function(){
-          go();
-        })
-        .on("change click keyup", "input", function(){
-          go();
+        document.addEventListener("DOMContentLoaded", go);
+        document.querySelectorAll("input").forEach(function(input) {
+          input.addEventListener("change", go);
+          input.addEventListener("click", go);
+          input.addEventListener("keyup", go);
         });
     </script>
 </body>
