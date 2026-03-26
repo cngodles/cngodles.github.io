@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Eye Medication Tracker</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -56,14 +56,23 @@
     .history-item {
       background: white;
       border-radius: 10px;
-      padding: 12px 16px;
       margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .history-header {
+      padding: 12px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
     .history-date { font-size: 15px; color: #333; }
+    .history-right { display: flex; align-items: center; gap: 10px; }
+    .history-chevron { font-size: 13px; color: #aaa; transition: transform 0.2s; }
+    .history-item.open .history-chevron { transform: rotate(90deg); }
     .history-score {
       font-size: 15px;
       font-weight: 700;
@@ -73,6 +82,15 @@
     .score-full    { background: #e8f5e9; color: #2e7d32; }
     .score-partial { background: #fff3e0; color: #e65100; }
     .score-none    { background: #fce4ec; color: #c62828; }
+
+    .history-doses {
+      display: none;
+      padding: 0 12px 12px;
+      border-top: 1px solid #f0f0f0;
+    }
+    .history-item.open .history-doses { display: block; }
+    .history-doses .dose-card { margin-bottom: 8px; padding: 12px; }
+    .history-doses .dose-card:last-child { margin-bottom: 0; }
 
     .done-msg { text-align: center; padding: 40px 20px; color: #888; font-size: 18px; }
   </style>
@@ -189,6 +207,41 @@
     });
   }
 
+  function renderHistoryItem(dateStr, item) {
+    const doses = getDoses(dateStr);
+    const data  = loadDay(dateStr);
+    const done  = doses.filter(d => data[d.id]).length;
+    const total = doses.length;
+    const cls   = done === total ? 'score-full' : done > 0 ? 'score-partial' : 'score-none';
+
+    const scoreEl = item.querySelector('.history-score');
+    scoreEl.textContent = `${done}/${total}`;
+    scoreEl.className = `history-score ${cls}`;
+
+    const dosesEl = item.querySelector('.history-doses');
+    dosesEl.innerHTML = doses.map(dose => {
+      const checked = !!data[dose.id];
+      return `
+        <div class="dose-card${checked ? ' checked' : ''}" data-date="${dateStr}" data-id="${dose.id}">
+          <div class="check-circle">${checked ? '✓' : ''}</div>
+          <div>
+            <div class="dose-label">${dose.label}</div>
+            <div class="dose-sub">${dose.sub}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    dosesEl.querySelectorAll('.dose-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const d = loadDay(this.dataset.date);
+        d[this.dataset.id] = !d[this.dataset.id];
+        saveDay(this.dataset.date, d);
+        renderHistoryItem(this.dataset.date, item);
+      });
+    });
+  }
+
   function renderHistory() {
     const section = document.getElementById('history-section');
     const days = [];
@@ -212,17 +265,32 @@
       const total = doses.length;
       const label = new Date(dateStr + 'T00:00:00')
         .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
       const cls = done === total ? 'score-full' : done > 0 ? 'score-partial' : 'score-none';
+
       html += `
-        <div class="history-item">
-          <span class="history-date">${label}</span>
-          <span class="history-score ${cls}">${done}/${total}</span>
+        <div class="history-item" data-date="${dateStr}">
+          <div class="history-header">
+            <span class="history-date">${label}</span>
+            <div class="history-right">
+              <span class="history-score ${cls}">${done}/${total}</span>
+              <span class="history-chevron">▶</span>
+            </div>
+          </div>
+          <div class="history-doses"></div>
         </div>
       `;
     });
 
     section.innerHTML = html;
+
+    section.querySelectorAll('.history-item').forEach(item => {
+      const dateStr = item.dataset.date;
+      item.querySelector('.history-header').addEventListener('click', function() {
+        const wasOpen = item.classList.contains('open');
+        item.classList.toggle('open');
+        if (!wasOpen) renderHistoryItem(dateStr, item);
+      });
+    });
   }
 
   renderToday();
