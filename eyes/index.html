@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eye Medication Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f0f4f8; color: #1a1a2e; }
+    .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: #666; margin-bottom: 20px; }
+    .section-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #444; }
+
+    .dose-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .dose-card.checked { background: #e8f5e9; }
+
+    .check-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 24px;
+      transition: all 0.15s;
+    }
+    .dose-card.checked .check-circle {
+      border-color: #4caf50;
+      background: #4caf50;
+      color: white;
+    }
+
+    .dose-label { font-size: 17px; font-weight: 500; }
+    .dose-sub { font-size: 13px; color: #888; margin-top: 2px; }
+
+    .progress-wrap { background: #e0e0e0; border-radius: 99px; height: 8px; margin-bottom: 20px; }
+    .progress-bar { background: #4caf50; height: 8px; border-radius: 99px; transition: width 0.3s; }
+
+    .history-section { margin-top: 28px; }
+    .history-item {
+      background: white;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .history-date { font-size: 15px; color: #333; }
+    .history-score {
+      font-size: 15px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 99px;
+    }
+    .score-full    { background: #e8f5e9; color: #2e7d32; }
+    .score-partial { background: #fff3e0; color: #e65100; }
+    .score-none    { background: #fce4ec; color: #c62828; }
+
+    .done-msg { text-align: center; padding: 40px 20px; color: #888; font-size: 18px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Eye Medication</h1>
+  <div id="today-date" class="subtitle"></div>
+  <div id="today-section"></div>
+  <div id="history-section" class="history-section"></div>
+</div>
+
+<script>
+  // Hardcoded schedule — one-off config, not meant to be reconfigured.
+  const DROPS_START = '2026-03-26'; // 4x/day wk1, 3x/day wk2, 2x/day wk3, 1x/day wk4
+  const ERY_START   = '2026-03-24'; // 1x/night both eyes for 14 days
+  const ERY_DAYS    = 14;
+
+  function toDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function daysBetween(startStr, dateStr) {
+    const a = new Date(startStr + 'T00:00:00');
+    const b = new Date(dateStr  + 'T00:00:00');
+    return Math.round((b - a) / 86400000);
+  }
+
+  function getDropsCount(dateStr) {
+    const d = daysBetween(DROPS_START, dateStr);
+    if (d < 0 || d >= 28) return 0;
+    if (d < 7)  return 4;
+    if (d < 14) return 3;
+    if (d < 21) return 2;
+    return 1;
+  }
+
+  function getEryNeeded(dateStr) {
+    const d = daysBetween(ERY_START, dateStr);
+    return d >= 0 && d < ERY_DAYS;
+  }
+
+  function getDoses(dateStr) {
+    const doses = [];
+    const drops = getDropsCount(dateStr);
+    for (let i = 1; i <= drops; i++) {
+      doses.push({ id: `drops_${i}`, label: `Drops — Dose ${i} of ${drops}`, sub: 'Eye drops' });
+    }
+    if (getEryNeeded(dateStr)) {
+      const dayNum = daysBetween(ERY_START, dateStr) + 1;
+      doses.push({ id: 'ery', label: 'Erythromycin', sub: `Both eyes · Night ${dayNum} of ${ERY_DAYS}` });
+    }
+    return doses;
+  }
+
+  function loadDay(dateStr) {
+    try { return JSON.parse(localStorage.getItem('eyes_' + dateStr) || '{}'); }
+    catch (e) { return {}; }
+  }
+
+  function saveDay(dateStr, data) {
+    localStorage.setItem('eyes_' + dateStr, JSON.stringify(data));
+  }
+
+  const today = toDateStr(new Date());
+
+  function renderToday() {
+    const doses = getDoses(today);
+    const data  = loadDay(today);
+    const section = document.getElementById('today-section');
+
+    document.getElementById('today-date').textContent = new Date(today + 'T00:00:00')
+      .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    if (doses.length === 0) {
+      section.innerHTML = '<p class="done-msg">Treatment complete!</p>';
+      return;
+    }
+
+    const done = doses.filter(d => data[d.id]).length;
+    const pct  = Math.round((done / doses.length) * 100);
+
+    let html = `
+      <div class="section-title">Today — ${done}/${doses.length}</div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+    `;
+
+    doses.forEach(dose => {
+      const checked = !!data[dose.id];
+      html += `
+        <div class="dose-card${checked ? ' checked' : ''}" data-id="${dose.id}">
+          <div class="check-circle">${checked ? '✓' : ''}</div>
+          <div>
+            <div class="dose-label">${dose.label}</div>
+            <div class="dose-sub">${dose.sub}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    section.innerHTML = html;
+
+    section.querySelectorAll('.dose-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const d = loadDay(today);
+        d[id] = !d[id];
+        saveDay(today, d);
+        renderToday();
+      });
+    });
+  }
+
+  function renderHistory() {
+    const section = document.getElementById('history-section');
+    const days = [];
+    const cur = new Date(ERY_START + 'T00:00:00');
+    const todayDate = new Date(today + 'T00:00:00');
+
+    while (cur < todayDate) {
+      days.push(toDateStr(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    if (days.length === 0) { section.innerHTML = ''; return; }
+
+    let html = '<div class="section-title">History</div>';
+
+    days.reverse().forEach(dateStr => {
+      const doses = getDoses(dateStr);
+      if (doses.length === 0) return;
+      const data  = loadDay(dateStr);
+      const done  = doses.filter(d => data[d.id]).length;
+      const total = doses.length;
+      const label = new Date(dateStr + 'T00:00:00')
+        .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+      const cls = done === total ? 'score-full' : done > 0 ? 'score-partial' : 'score-none';
+      html += `
+        <div class="history-item">
+          <span class="history-date">${label}</span>
+          <span class="history-score ${cls}">${done}/${total}</span>
+        </div>
+      `;
+    });
+
+    section.innerHTML = html;
+  }
+
+  renderToday();
+  renderHistory();
+</script>
+</body>
+</html>
