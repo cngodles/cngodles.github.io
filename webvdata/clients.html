@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hours Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e2e0d8;
+    --text: #1a1917;
+    --text-muted: #7a786f;
+    --accent: #d4522a;
+    --accent-light: #f5e8e3;
+    --success: #2a8a4a;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--text); color: #fff;
+    padding: 18px 32px; display: flex; align-items: center; gap: 16px;
+  }
+  header h1 { font-size: 1rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--mono); }
+  header .badge { font-family: var(--mono); font-size: 0.7rem; padding: 3px 8px; border: 1px solid rgba(255,255,255,0.2); border-radius: 2px; color: rgba(255,255,255,0.5); }
+
+  .main { max-width: 1160px; margin: 0 auto; padding: 32px 24px; }
+
+  /* IMPORT */
+  .import-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 28px; overflow: hidden; }
+  .import-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .import-tab { padding: 12px 20px; font-size: 0.82rem; font-family: var(--mono); font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; letter-spacing: 0.04em; }
+  .import-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--accent-light); }
+  .import-body { padding: 20px 24px; }
+
+  .drop-zone { border: 2px dashed var(--border); border-radius: 4px; padding: 36px 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
+  .drop-zone:hover, .drop-zone.dragging { border-color: var(--accent); background: var(--accent-light); }
+  .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 2rem; margin-bottom: 8px; }
+  .drop-label { font-size: 0.85rem; color: var(--text-muted); }
+  .drop-label strong { color: var(--text); }
+
+  .paste-area { width: 100%; height: 140px; font-family: var(--mono); font-size: 0.78rem; border: 1px solid var(--border); border-radius: 4px; padding: 12px; resize: vertical; color: var(--text); background: #fafaf8; outline: none; transition: border-color 0.15s; }
+  .paste-area:focus { border-color: var(--accent); }
+
+  .col-map-grid { display: flex; gap: 12px; align-items: flex-end; margin-top: 14px; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.72rem; font-family: var(--mono); color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+  .field label .opt { font-weight: 300; opacity: 0.65; }
+
+  select, .btn {
+    font-family: var(--sans); font-size: 0.85rem; height: 36px; border-radius: 4px;
+    border: 1px solid var(--border); padding: 0 12px; background: white; color: var(--text);
+    cursor: pointer; outline: none; transition: border-color 0.15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  select { padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a786f'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+  select option { color: var(--text); background: white; }
+  select:focus { border-color: var(--accent); }
+
+  .btn { background: var(--accent); color: white; border-color: var(--accent); font-weight: 500; padding: 0 20px; letter-spacing: 0.02em; }
+  .btn:hover { background: #b8441f; border-color: #b8441f; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .status-bar { font-family: var(--mono); font-size: 0.75rem; padding: 8px 12px; border-radius: 4px; margin-top: 12px; display: none; }
+  .status-bar.ok  { background: #e8f5ec; color: var(--success); display: block; }
+  .status-bar.err { background: #fdecea; color: #c0392b; display: block; }
+
+  /* CONTROLS */
+  .controls-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .toggle-group { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--surface); }
+  .toggle-btn { padding: 7px 14px; font-size: 0.78rem; font-family: var(--mono); border: none; background: transparent; color: var(--text-muted); cursor: pointer; border-right: 1px solid var(--border); transition: background 0.15s, color 0.15s; letter-spacing: 0.04em; white-space: nowrap; }
+  .toggle-btn:last-child { border-right: none; }
+  .toggle-btn.active { background: var(--text); color: #fff; }
+  .toggle-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .ctrl-label { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+  .spacer { flex: 1; min-width: 8px; }
+
+  /* FILTER PANELS */
+  .filter-panels { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .filter-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; display: none; }
+  .filter-panel.visible { display: block; }
+  .filter-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .filter-label { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); flex: 1; }
+  .filter-action { font-family: var(--mono); font-size: 0.7rem; padding: 2px 9px; border: 1px solid var(--border); border-radius: 3px; background: white; color: var(--text-muted); cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+  .filter-action:hover { color: var(--accent); border-color: var(--accent); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .emp-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 3px; border: 1.5px solid transparent; cursor: pointer; font-size: 0.78rem; font-family: var(--sans); font-weight: 500; transition: opacity 0.15s, filter 0.15s; user-select: none; background: white; color: var(--text); }
+  .emp-pill .pill-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .emp-pill.off { opacity: 0.32; filter: grayscale(0.6); }
+
+  /* DASHBOARD */
+  #dashboard { display: none; }
+  .summary-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .chip { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 10px 16px; }
+  .chip-val { font-size: 1.3rem; font-weight: 600; display: block; color: var(--text); font-family: var(--sans); font-variant-numeric: tabular-nums; }
+  .chip-lbl { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); }
+
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; margin-bottom: 20px; }
+  .chart-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .chart-title { font-family: var(--mono); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+  .chart-subtitle { font-size: 1.4rem; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  .chart-wrap { position: relative; height: 340px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Hours Dashboard</h1>
+  <span class="badge">CLIENT-SIDE · NO SERVER</span>
+</header>
+
+<div class="main">
+
+  <!-- IMPORT PANEL -->
+  <div class="import-panel">
+    <div class="import-tabs">
+      <button class="import-tab active" data-tab="upload">Upload File</button>
+      <button class="import-tab" data-tab="paste">Paste CSV</button>
+    </div>
+    <div class="import-body">
+      <div id="tab-upload">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".csv,.tsv,.txt">
+          <div class="drop-icon">📂</div>
+          <div class="drop-label"><strong>Click to choose</strong> or drag &amp; drop a CSV file</div>
+        </div>
+      </div>
+      <div id="tab-paste" class="hidden">
+        <textarea class="paste-area" id="paste-area" placeholder="Paste CSV data here...&#10;&#10;Employee Name,Date,Department Name,Client Name,Hours&#10;Jane Smith,2024-01-03,Engineering,Acme Corp,8"></textarea>
+      </div>
+
+      <div class="col-map-grid">
+        <div class="field">
+          <label>Delimiter</label>
+          <select id="delimiter-select" style="width:130px">
+            <option value="auto">Auto-detect</option>
+            <option value=",">Comma (,)</option>
+            <option value="	">Tab (\t)</option>
+            <option value=";">Semicolon (;)</option>
+            <option value="|">Pipe (|)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <select id="date-col-select" style="width:148px"><option>— load first —</option></select>
+        </div>
+        <div class="field">
+          <label>Hours</label>
+          <select id="hours-col-select" style="width:148px"><option>— load first —</option></select>
+        </div>
+        <div class="field">
+          <label>Employee <span class="opt">(opt)</span></label>
+          <select id="name-col-select" style="width:148px"><option value="">None</option></select>
+        </div>
+        <div class="field">
+          <label>Department <span class="opt">(opt)</span></label>
+          <select id="dept-col-select" style="width:148px"><option value="">None</option></select>
+        </div>
+        <div class="field">
+          <label>Client <span class="opt">(opt)</span></label>
+          <select id="client-col-select" style="width:148px"><option value="">None</option></select>
+        </div>
+        <button class="btn" id="load-btn" disabled>Load Data</button>
+      </div>
+      <div class="status-bar" id="status-bar"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard">
+    <div class="summary-chips" id="summary-chips"></div>
+
+    <div class="controls-bar">
+      <span class="ctrl-label">Period</span>
+      <div class="toggle-group" id="period-toggle">
+        <button class="toggle-btn active" data-period="day">Day</button>
+        <button class="toggle-btn" data-period="week">Week</button>
+        <button class="toggle-btn" data-period="month">Month</button>
+      </div>
+      <span class="ctrl-label" style="margin-left:4px">Group By</span>
+      <div class="toggle-group" id="groupby-toggle">
+        <button class="toggle-btn active" data-groupby="none">None</button>
+        <button class="toggle-btn" data-groupby="employee" id="gb-employee">Employee</button>
+        <button class="toggle-btn" data-groupby="department" id="gb-department">Department</button>
+        <button class="toggle-btn" data-groupby="client" id="gb-client">Client</button>
+      </div>
+      <div class="spacer"></div>
+      <span class="ctrl-label">Stack</span>
+      <div class="toggle-group" id="stack-toggle">
+        <button class="toggle-btn active" data-stack="grouped" disabled>Grouped</button>
+        <button class="toggle-btn" data-stack="stacked" disabled>Stacked</button>
+      </div>
+      <span class="ctrl-label" style="margin-left:4px">Chart</span>
+      <div class="toggle-group" id="chart-toggle">
+        <button class="toggle-btn active" data-chart="bar">Bar</button>
+        <button class="toggle-btn" data-chart="line">Line</button>
+      </div>
+    </div>
+
+    <!-- FILTER PANELS (always visible when dimension has data) -->
+    <div class="filter-panels">
+      <div class="filter-panel" id="filter-client">
+        <div class="filter-header">
+          <span class="filter-label">Client</span>
+          <button class="filter-action" data-dim="client" data-action="all">All</button>
+          <button class="filter-action" data-dim="client" data-action="none">None</button>
+        </div>
+        <div class="pill-row" id="pills-client"></div>
+      </div>
+      <div class="filter-panel" id="filter-department">
+        <div class="filter-header">
+          <span class="filter-label">Department</span>
+          <button class="filter-action" data-dim="department" data-action="all">All</button>
+          <button class="filter-action" data-dim="department" data-action="none">None</button>
+        </div>
+        <div class="pill-row" id="pills-department"></div>
+      </div>
+      <div class="filter-panel" id="filter-employee">
+        <div class="filter-header">
+          <span class="filter-label">Employee</span>
+          <button class="filter-action" data-dim="employee" data-action="all">All</button>
+          <button class="filter-action" data-dim="employee" data-action="none">None</button>
+        </div>
+        <div class="pill-row" id="pills-employee"></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-title" id="chart-title">Total Hours</div>
+          <div class="chart-subtitle" id="chart-subtitle"></div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="main-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let parsedRows    = [];
+let chartInstance = null;
+let currentPeriod  = 'day';
+let currentGroupBy = 'none';   // none | employee | department | client
+let currentChart   = 'bar';
+let currentStack   = 'grouped'; // grouped | stacked
+
+const activeFilters = { employee: new Set(), department: new Set(), client: new Set() };
+const allValues     = { employee: [], department: [], client: [] };
+
+const COLORS = [
+  '#d4522a','#2a6dd4','#2a8a4a','#c0392b','#8e44ad',
+  '#16a085','#d35400','#2980b9','#27ae60','#7f8c8d',
+  '#e67e22','#1abc9c','#9b59b6','#3498db','#e74c3c',
+  '#f39c12','#1a6b3c','#6c3483','#117a65','#784212',
+];
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.import-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.import-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-upload').classList.toggle('hidden', btn.dataset.tab !== 'upload');
+    document.getElementById('tab-paste').classList.toggle('hidden',  btn.dataset.tab !== 'paste');
+    checkEnableLoad();
+  });
+});
+
+const fileInput = document.getElementById('file-input');
+const pasteArea = document.getElementById('paste-area');
+const loadBtn   = document.getElementById('load-btn');
+fileInput.addEventListener('change', checkEnableLoad);
+pasteArea.addEventListener('input',  checkEnableLoad);
+
+function checkEnableLoad() {
+  const tab = document.querySelector('.import-tab.active').dataset.tab;
+  loadBtn.disabled = tab === 'upload' ? !fileInput.files.length : pasteArea.value.trim().length < 5;
+}
+
+// ─── DRAG & DROP ──────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragging'); }));
+['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragging'); }));
+dropZone.addEventListener('drop', ev => {
+  const file = ev.dataTransfer.files[0]; if (!file) return;
+  document.querySelectorAll('.import-tab').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-tab="upload"]').classList.add('active');
+  document.getElementById('tab-upload').classList.remove('hidden');
+  document.getElementById('tab-paste').classList.add('hidden');
+  const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files;
+  dropZone.querySelector('.drop-label').innerHTML = `<strong>${file.name}</strong>`;
+  checkEnableLoad();
+});
+
+// ─── CSV ──────────────────────────────────────────────────────────────────────
+function detectDelimiter(sample) {
+  const line = sample.split(/\r?\n/)[0];
+  let best = ',', bestCount = 0;
+  for (const d of [',','\t',';','|']) {
+    const re = d === '\t' ? /\t/g : new RegExp('\\' + d, 'g');
+    const n = (line.match(re)||[]).length;
+    if (n > bestCount) { bestCount = n; best = d; }
+  }
+  return best;
+}
+
+function splitLine(line, delim) {
+  const res = []; let cur = '', inQ = false;
+  for (const ch of line) {
+    if (ch === '"' || ch === "'") inQ = !inQ;
+    else if (ch === delim && !inQ) { res.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  res.push(cur); return res;
+}
+
+function parseCSV(text, delim) {
+  const lines = text.trim().split(/\r?\n/);
+  const header = splitLine(lines[0], delim).map(h => h.trim().replace(/^["']|["']$/g,''));
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cells = splitLine(lines[i], delim).map(c => c.trim().replace(/^["']|["']$/g,''));
+    const obj = {}; header.forEach((h,j) => obj[h] = cells[j] ?? '');
+    rows.push(obj);
+  }
+  return { header, rows };
+}
+
+function parseDate(str) {
+  if (!str) return null;
+  let d = new Date(str); if (!isNaN(d)) return d;
+  const m1 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m1) return new Date(+m1[3],+m1[1]-1,+m1[2]);
+  const m2 = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (m2) return new Date(+m2[3],+m2[2]-1,+m2[1]);
+  return null;
+}
+
+// ─── COLUMN SELECTS ───────────────────────────────────────────────────────────
+function populateSelects(headers) {
+  const optIds = ['name-col-select','dept-col-select','client-col-select'];
+  ['date-col-select','hours-col-select',...optIds].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = optIds.includes(id) ? '<option value="">None</option>' : '';
+    headers.forEach(h => { const o = document.createElement('option'); o.value=h; o.textContent=h; el.appendChild(o); });
+  });
+  const lc = headers.map(h => h.toLowerCase());
+  const pick = kws => lc.findIndex(h => kws.some(k => h.includes(k)));
+  const set = (id, idx, offset=0) => { if (idx>=0) document.getElementById(id).selectedIndex = idx + offset; };
+  set('date-col-select',   pick(['date']));
+  set('hours-col-select',  pick(['hour']));
+  set('name-col-select',   pick(['employee','emp name','staff name']), 1);
+  set('dept-col-select',   pick(['department','dept']), 1);
+  set('client-col-select', pick(['client']), 1);
+}
+
+// ─── LOAD ─────────────────────────────────────────────────────────────────────
+loadBtn.addEventListener('click', async () => {
+  const tab = document.querySelector('.import-tab.active').dataset.tab;
+  const raw = tab === 'upload' ? await fileInput.files[0].text() : pasteArea.value;
+  const delimSel = document.getElementById('delimiter-select').value;
+  const delim = delimSel === 'auto' ? detectDelimiter(raw) : delimSel;
+  const { header, rows } = parseCSV(raw, delim);
+  window._rawRows = rows;
+  populateSelects(header);
+  setStatus(`Detected ${rows.length} rows, ${header.length} columns. Adjust column mapping if needed, then click Apply.`, 'ok');
+  loadBtn.textContent = 'Apply';
+  loadBtn.onclick = applyData;
+  applyData();
+});
+
+function applyData() {
+  const rows      = window._rawRows;
+  const dateFld   = document.getElementById('date-col-select').value;
+  const hoursFld  = document.getElementById('hours-col-select').value;
+  const nameFld   = document.getElementById('name-col-select').value;
+  const deptFld   = document.getElementById('dept-col-select').value;
+  const clientFld = document.getElementById('client-col-select').value;
+
+  const parsed = []; let skipped = 0;
+  rows.forEach(row => {
+    const d = parseDate(row[dateFld]);
+    const h = parseFloat(row[hoursFld]);
+    if (!d || isNaN(h)) { skipped++; return; }
+    parsed.push({
+      date:       d,
+      hours:      h,
+      employee:   nameFld   ? (row[nameFld]   || 'Unknown') : null,
+      department: deptFld   ? (row[deptFld]   || 'Unknown') : null,
+      client:     clientFld ? (row[clientFld] || 'Unknown') : null,
+    });
+  });
+
+  if (!parsed.length) { setStatus('No valid rows found. Check column mapping.', 'err'); return; }
+  parsedRows = parsed;
+
+  ['employee','department','client'].forEach(dim => {
+    allValues[dim] = [...new Set(parsed.map(r => r[dim]).filter(Boolean))].sort();
+    activeFilters[dim] = new Set(allValues[dim]);
+  });
+
+  setStatus(`Loaded ${parsed.length} rows.` + (skipped ? ` (${skipped} skipped)` : ''), 'ok');
+  buildDashboard();
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status-bar');
+  el.textContent = msg; el.className = 'status-bar ' + type;
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function buildDashboard() {
+  document.getElementById('dashboard').style.display = 'block';
+  updateGroupByButtons();
+  buildSummary();
+  buildAllFilterPanels();
+  syncStackToggle();
+  renderChart();
+}
+
+function updateGroupByButtons() {
+  document.getElementById('gb-employee').disabled   = !allValues.employee.length;
+  document.getElementById('gb-department').disabled = !allValues.department.length;
+  document.getElementById('gb-client').disabled     = !allValues.client.length;
+  if (currentGroupBy !== 'none' && !allValues[currentGroupBy].length) {
+    currentGroupBy = 'none';
+    highlightToggle(document.querySelector('[data-groupby="none"]'), 'groupby-toggle');
+  }
+}
+
+function buildSummary() {
+  const total = parsedRows.reduce((s,r) => s+r.hours, 0);
+  const dates = parsedRows.map(r => r.date);
+  const minD  = new Date(Math.min(...dates));
+  const maxD  = new Date(Math.max(...dates));
+  let extras = '';
+  const ec = allValues.employee.length, dc = allValues.department.length, cc = allValues.client.length;
+  if (ec) extras += `<div class="chip"><span class="chip-val">${ec}</span><span class="chip-lbl">Employee${ec!==1?'s':''}</span></div>`;
+  if (dc) extras += `<div class="chip"><span class="chip-val">${dc}</span><span class="chip-lbl">Department${dc!==1?'s':''}</span></div>`;
+  if (cc) extras += `<div class="chip"><span class="chip-val">${cc}</span><span class="chip-lbl">Client${cc!==1?'s':''}</span></div>`;
+  document.getElementById('summary-chips').innerHTML = `
+    <div class="chip"><span class="chip-val">${total.toLocaleString()}</span><span class="chip-lbl">Total Hours</span></div>
+    ${extras}
+    <div class="chip"><span class="chip-val">${fmtDate(minD)} – ${fmtDate(maxD)}</span><span class="chip-lbl">Date Range</span></div>
+  `;
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+// ─── FILTER PANELS ────────────────────────────────────────────────────────────
+function buildAllFilterPanels() {
+  ['client','department','employee'].forEach(dim => {
+    const values  = allValues[dim];
+    const pillsEl = document.getElementById(`pills-${dim}`);
+    const panel   = document.getElementById(`filter-${dim}`);
+    pillsEl.innerHTML = '';
+    if (!values.length) { panel.classList.remove('visible'); return; }
+    panel.classList.add('visible');
+    values.forEach((val, i) => {
+      const color = COLORS[i % COLORS.length];
+      const pill = document.createElement('button');
+      pill.className = 'emp-pill';
+      pill.dataset.dim = dim; pill.dataset.val = val;
+      pill.style.borderColor = color;
+      pill.innerHTML = `<span class="pill-swatch" style="background:${color}"></span>${val}`;
+      pill.addEventListener('click', () => {
+        if (activeFilters[dim].has(val)) { activeFilters[dim].delete(val); pill.classList.add('off'); }
+        else                             { activeFilters[dim].add(val);    pill.classList.remove('off'); }
+        renderChart();
+      });
+      pillsEl.appendChild(pill);
+    });
+  });
+
+  document.querySelectorAll('.filter-action').forEach(btn => {
+    // Remove old listeners by cloning
+    const fresh = btn.cloneNode(true);
+    btn.replaceWith(fresh);
+    fresh.addEventListener('click', () => {
+      const dim = fresh.dataset.dim, action = fresh.dataset.action;
+      if (action === 'all') {
+        allValues[dim].forEach(v => activeFilters[dim].add(v));
+        document.querySelectorAll(`#pills-${dim} .emp-pill`).forEach(p => p.classList.remove('off'));
+      } else {
+        activeFilters[dim].clear();
+        document.querySelectorAll(`#pills-${dim} .emp-pill`).forEach(p => p.classList.add('off'));
+      }
+      renderChart();
+    });
+  });
+}
+
+// ─── TOGGLES ──────────────────────────────────────────────────────────────────
+document.getElementById('period-toggle').addEventListener('click', e => {
+  if (!e.target.dataset.period || e.target.disabled) return;
+  currentPeriod = e.target.dataset.period;
+  highlightToggle(e.target, 'period-toggle');
+  renderChart();
+});
+document.getElementById('groupby-toggle').addEventListener('click', e => {
+  if (!e.target.dataset.groupby || e.target.disabled) return;
+  currentGroupBy = e.target.dataset.groupby;
+  highlightToggle(e.target, 'groupby-toggle');
+  syncStackToggle();
+  renderChart();
+});
+document.getElementById('stack-toggle').addEventListener('click', e => {
+  if (!e.target.dataset.stack || e.target.disabled) return;
+  currentStack = e.target.dataset.stack;
+  highlightToggle(e.target, 'stack-toggle');
+  renderChart();
+});
+document.getElementById('chart-toggle').addEventListener('click', e => {
+  if (!e.target.dataset.chart) return;
+  currentChart = e.target.dataset.chart;
+  highlightToggle(e.target, 'chart-toggle');
+  syncStackToggle();
+  renderChart();
+});
+
+function syncStackToggle() {
+  const enabled = currentGroupBy !== 'none' && currentChart === 'bar';
+  document.querySelectorAll('#stack-toggle .toggle-btn').forEach(b => b.disabled = !enabled);
+}
+
+function highlightToggle(btn, groupId) {
+  document.getElementById(groupId).querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── FILTER ───────────────────────────────────────────────────────────────────
+function getFilteredRows() {
+  return parsedRows.filter(r =>
+    (!r.employee   || activeFilters.employee.has(r.employee))   &&
+    (!r.department || activeFilters.department.has(r.department)) &&
+    (!r.client     || activeFilters.client.has(r.client))
+  );
+}
+
+// ─── PERIOD KEY ───────────────────────────────────────────────────────────────
+function periodKey(date) {
+  if (currentPeriod === 'day')   return date.toISOString().slice(0,10);
+  if (currentPeriod === 'week') {
+    const t = new Date(date); t.setDate(t.getDate() - t.getDay());
+    return t.toISOString().slice(0,10);
+  }
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+}
+
+function periodLabel(key) {
+  if (currentPeriod === 'day')
+    return new Date(key+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  if (currentPeriod === 'week')
+    return 'Wk '+new Date(key+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  const [y,m] = key.split('-');
+  return new Date(+y,+m-1,1).toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+}
+
+// ─── AGGREGATE ────────────────────────────────────────────────────────────────
+function aggregate() {
+  const filtered = getFilteredRows();
+  // Stable x-axis: use all dates in the full dataset
+  const keys   = [...new Set(parsedRows.map(r => periodKey(r.date)))].sort();
+  const labels = keys.map(periodLabel);
+
+  if (currentGroupBy === 'none') {
+    const map = {}; keys.forEach(k => map[k] = 0);
+    filtered.forEach(r => { map[periodKey(r.date)] += r.hours; });
+    return { labels, datasets: [{
+      label: 'Total Hours',
+      data: keys.map(k => +map[k].toFixed(2)),
+      backgroundColor: COLORS[0]+'cc', borderColor: COLORS[0], borderWidth: 2,
+      fill: currentChart === 'line', tension: 0.3,
+      pointRadius: currentPeriod === 'day' ? 2 : 4,
+    }]};
+  }
+
+  const dim = currentGroupBy;
+  const stable  = allValues[dim];
+  const visible = stable.filter(v => activeFilters[dim].has(v));
+
+  const datasets = visible.map(val => {
+    const ci = stable.indexOf(val);
+    const map = {}; keys.forEach(k => map[k] = 0);
+    filtered.filter(r => r[dim] === val).forEach(r => { map[periodKey(r.date)] += r.hours; });
+    return {
+      label: val,
+      data: keys.map(k => +map[k].toFixed(2)),
+      backgroundColor: COLORS[ci % COLORS.length] + (currentChart==='bar' ? 'cc' : '33'),
+      borderColor: COLORS[ci % COLORS.length],
+      borderWidth: currentChart === 'bar' ? 0 : 2,
+      fill: false, tension: 0.3,
+      pointRadius: currentPeriod === 'day' ? 2 : 4,
+    };
+  });
+  return { labels, datasets };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderChart() {
+  const filtered  = getFilteredRows();
+  const total     = filtered.reduce((s,r) => s+r.hours, 0);
+  const totalAll  = parsedRows.reduce((s,r) => s+r.hours, 0);
+  const isFiltered = total !== totalAll;
+  const isGrouped  = currentGroupBy !== 'none';
+  const useStack   = isGrouped && currentChart === 'bar' && currentStack === 'stacked';
+
+  const dimLabel = { none:'Combined', employee:'Employee', department:'Department', client:'Client' };
+  document.getElementById('chart-title').textContent =
+    `Hours by ${currentPeriod[0].toUpperCase()+currentPeriod.slice(1)} · Group: ${dimLabel[currentGroupBy]}`;
+  document.getElementById('chart-subtitle').textContent =
+    total.toLocaleString() + ' hrs' + (isFiltered ? ` of ${totalAll.toLocaleString()} total` : '');
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(document.getElementById('main-chart').getContext('2d'), {
+    type: currentChart === 'bar' ? 'bar' : 'line',
+    data: aggregate(),
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: {
+          display: isGrouped,
+          labels: { font:{family:"'DM Sans',sans-serif",size:12}, color:'#1a1917', boxWidth:12, padding:14 }
+        },
+        tooltip: {
+          backgroundColor:'#1a1917',
+          titleFont:{family:"'DM Mono',monospace",size:11},
+          bodyFont:{family:"'DM Sans',sans-serif",size:12},
+          padding:10,
+          callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toLocaleString()} hrs` }
+        }
+      },
+      scales: {
+        x: {
+          stacked: useStack,
+          grid:{color:'#e2e0d8'},
+          ticks:{font:{family:"'DM Mono',monospace",size:10},color:'#7a786f',maxRotation:45,autoSkip:true,maxTicksLimit:currentPeriod==='day'?30:24}
+        },
+        y: {
+          stacked: useStack,
+          grid:{color:'#e2e0d8'},
+          beginAtZero:true,
+          ticks:{font:{family:"'DM Mono',monospace",size:11},color:'#7a786f',callback:v=>v.toLocaleString()}
+        }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
