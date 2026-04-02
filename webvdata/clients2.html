@@ -141,6 +141,31 @@
   #client-totals-section.visible { display: block; }
   .horiz-chart-wrap { position: relative; } /* height set dynamically */
 
+  /* ── DATE RANGE BAR ── */
+  .date-range-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px 18px; margin-bottom: 16px;
+  }
+  .date-range-bar .ctrl-label { flex-shrink: 0; }
+  input[type="date"] {
+    font-family: var(--mono); font-size: 0.82rem; height: 34px;
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 0 10px; background: white; color: var(--text);
+    outline: none; cursor: pointer; transition: border-color 0.15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  input[type="date"]:focus { border-color: var(--accent); }
+  .date-sep { font-family: var(--mono); font-size: 0.75rem; color: var(--text-muted); }
+  .date-range-info { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); margin-left: 4px; }
+  .btn-ghost {
+    font-family: var(--mono); font-size: 0.72rem; height: 30px; padding: 0 12px;
+    border: 1px solid var(--border); border-radius: 3px; background: white;
+    color: var(--text-muted); cursor: pointer; transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .btn-ghost:hover { color: var(--accent); border-color: var(--accent); }
+
   .hidden { display: none !important; }
 </style>
 </head>
@@ -196,6 +221,17 @@
   <!-- DASHBOARD -->
   <div id="dashboard">
     <div class="summary-chips" id="summary-chips"></div>
+
+    <!-- DATE RANGE BAR -->
+    <div class="date-range-bar" id="date-range-bar">
+      <span class="ctrl-label">Date Range</span>
+      <input type="date" id="range-start">
+      <span class="date-sep">→</span>
+      <input type="date" id="range-end">
+      <span class="date-range-info" id="range-info"></span>
+      <div class="spacer"></div>
+      <button class="btn-ghost" id="range-reset">Reset to Full Range</button>
+    </div>
 
     <!-- MAIN CONTROLS -->
     <div class="controls-bar">
@@ -312,6 +348,10 @@ let currentChart   = 'bar';
 let currentStack   = 'grouped';
 let clientTotalsRange = 'period'; // 'period' | 'alltime'
 let isExpanded     = false;
+
+// Global date range (null = no constraint)
+let rangeStart = null; // Date
+let rangeEnd   = null; // Date
 
 const activeFilters = { employee: new Set(), department: new Set(), client: new Set() };
 const allValues     = { employee: [], department: [], client: [] };
@@ -474,6 +514,11 @@ function applyData() {
   });
   selectedEmpFocus = new Set(); // reset on reload
 
+  // Initialize date range to full extent
+  const dates = parsed.map(r => r.date);
+  rangeStart = new Date(Math.min(...dates));
+  rangeEnd   = new Date(Math.max(...dates));
+
   setStatus(`Loaded ${parsed.length} rows.` + (skipped ? ` (${skipped} skipped)` : ''), 'ok');
   buildDashboard();
 }
@@ -491,10 +536,69 @@ function buildDashboard() {
   document.getElementById('expand-btn').style.display = 'inline-block';
   updateGroupByButtons();
   buildSummary();
+  initDateRangeBar();
   buildAllFilterPanels();
   buildEmpFocusPanel();
   syncStackToggle();
   renderAll();
+}
+
+function toInputDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function initDateRangeBar() {
+  const startEl = document.getElementById('range-start');
+  const endEl   = document.getElementById('range-end');
+  const infoEl  = document.getElementById('range-info');
+  const allDates = parsedRows.map(r => r.date);
+  const absMin = new Date(Math.min(...allDates));
+  const absMax = new Date(Math.max(...allDates));
+  startEl.min = toInputDate(absMin); startEl.max = toInputDate(absMax);
+  endEl.min   = toInputDate(absMin); endEl.max   = toInputDate(absMax);
+  startEl.value = toInputDate(rangeStart);
+  endEl.value   = toInputDate(rangeEnd);
+  updateRangeInfo(infoEl);
+
+  // Re-wire (clone to remove any old listeners from a previous load)
+  const freshStart = startEl.cloneNode(true); startEl.replaceWith(freshStart);
+  const freshEnd   = endEl.cloneNode(true);   endEl.replaceWith(freshEnd);
+  const freshReset = document.getElementById('range-reset').cloneNode(true);
+  document.getElementById('range-reset').replaceWith(freshReset);
+
+  let debounce;
+  const onChange = () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      const s = freshStart.value ? new Date(freshStart.value + 'T00:00:00') : absMin;
+      const e = freshEnd.value   ? new Date(freshEnd.value   + 'T23:59:59') : absMax;
+      rangeStart = isNaN(s) ? absMin : s;
+      rangeEnd   = isNaN(e) ? absMax : e;
+      if (rangeStart > rangeEnd) rangeStart = new Date(rangeEnd);
+      freshStart.value = toInputDate(rangeStart);
+      updateRangeInfo(infoEl);
+      renderAll();
+    }, 300);
+  };
+  freshStart.addEventListener('change', onChange);
+  freshEnd.addEventListener('change', onChange);
+  freshReset.addEventListener('click', () => {
+    rangeStart = absMin; rangeEnd = absMax;
+    freshStart.value = toInputDate(absMin);
+    freshEnd.value   = toInputDate(absMax);
+    updateRangeInfo(infoEl);
+    renderAll();
+  });
+}
+
+function updateRangeInfo(el) {
+  const days   = Math.round((rangeEnd - rangeStart) / 86400000) + 1;
+  const weeks  = Math.round(days / 7);
+  const months = Math.round(days / 30.44);
+  let label = `${days.toLocaleString()} day${days!==1?'s':''}`;
+  if (days >= 14) label += ` · ~${weeks} wk${weeks!==1?'s':''}`;
+  if (days >= 60) label += ` · ~${months} mo`;
+  el.textContent = label;
 }
 
 function updateGroupByButtons() {
@@ -690,11 +794,14 @@ document.getElementById('expand-btn').addEventListener('click', () => {
 // FILTERING
 // ═══════════════════════════════════════════════════════════════════════════════
 function getFilteredRows() {
-  return parsedRows.filter(r =>
-    (!r.employee   || activeFilters.employee.has(r.employee))   &&
-    (!r.department || activeFilters.department.has(r.department)) &&
-    (!r.client     || activeFilters.client.has(r.client))
-  );
+  return parsedRows.filter(r => {
+    if (rangeStart && r.date < rangeStart) return false;
+    if (rangeEnd   && r.date > rangeEnd)   return false;
+    if (r.employee   && !activeFilters.employee.has(r.employee))     return false;
+    if (r.department && !activeFilters.department.has(r.department)) return false;
+    if (r.client     && !activeFilters.client.has(r.client))         return false;
+    return true;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -758,7 +865,7 @@ function renderAll() {
 // ═══════════════════════════════════════════════════════════════════════════════
 function aggregateMain() {
   const filtered = getFilteredRows();
-  const keys   = [...new Set(parsedRows.map(r => periodKey(r.date)))].sort();
+  const keys   = [...new Set(filtered.map(r => periodKey(r.date)))].sort();
   const labels = keys.map(periodLabel);
 
   if (currentGroupBy === 'none') {
@@ -900,7 +1007,8 @@ function renderEmpClientCharts() {
   section.classList.add('visible');
 
   const clients = allValues.client;
-  const keys    = [...new Set(parsedRows.map(r => periodKey(r.date)))].sort();
+  const filtered = getFilteredRows();
+  const keys    = [...new Set(filtered.map(r => periodKey(r.date)))].sort();
   const labels  = keys.map(periodLabel);
 
   // Remove cards for deselected employees
@@ -933,8 +1041,9 @@ function renderEmpClientCharts() {
       container.appendChild(card);
     }
 
-    // Build per-client datasets for this employee
+    // Build per-client datasets for this employee (respects date range + dimension filters)
     const empRows = parsedRows.filter(r => r.employee === name &&
+      r.date >= rangeStart && r.date <= rangeEnd &&
       (!r.department || activeFilters.department.has(r.department)) &&
       (!r.client     || activeFilters.client.has(r.client))
     );
