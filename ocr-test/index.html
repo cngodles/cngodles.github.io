@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <title>Client-Side OCR (Preprocessed, No Worker)</title>
 <!-- Use a stable Tesseract.js build -->
-<script src="https://unpkg.com/tesseract.js@v2.1.4/dist/tesseract.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@7.0.0/dist/tesseract.min.js"></script>
 <style>
   body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -103,17 +103,15 @@
         // ---- OCR on the preprocessed canvas ----
         statusEl.textContent = 'Running OCR…';
 
-        const result = await Tesseract.recognize(
-          canvas,
-          'eng',
-          {
-            logger: m => {
-              if (m && m.status && typeof m.progress === 'number') {
-                statusEl.textContent = `${m.status} (${Math.round(m.progress * 100)}%)`;
-              }
+        const worker = await Tesseract.createWorker('eng', 1, {
+          logger: m => {
+            if (m && m.status && typeof m.progress === 'number') {
+              statusEl.textContent = `${m.status} (${Math.round(m.progress * 100)}%)`;
             }
           }
-        );
+        });
+        const result = await worker.recognize(canvas);
+        await worker.terminate();
 
         textArea.value = result.data && result.data.text ? result.data.text : '';
         statusEl.textContent = 'Done.';
