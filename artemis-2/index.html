@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artemis II Horizons Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --panel: #121936;
+      --panel-2: #1a2347;
+      --text: #e7ecff;
+      --muted: #aab5df;
+      --line: #2e3a6d;
+      --accent: #89a8ff;
+      --earth: #5fa8ff;
+      --moon: #cfd6e6;
+      --ship: #ffd166;
+      --path: #8fe388;
+      --danger: #ff7b7b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #17214a 0%, var(--bg) 48%);
+      color: var(--text);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: rgba(7, 12, 28, 0.6);
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.3rem;
+      line-height: 1.2;
+    }
+
+    .subtle, .note, .stats, label, button, input, textarea, select {
+      font-size: 0.93rem;
+    }
+
+    .subtle, .note, .muted {
+      color: var(--muted);
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      margin: 0 0 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      margin: 0 0 6px;
+      color: var(--muted);
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      line-height: 1.4;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      line-height: 1.3;
+    }
+
+    button:hover { filter: brightness(1.08); }
+    button:disabled { opacity: 0.55; cursor: wait; }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      min-height: 0;
+      padding: 16px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      min-height: 560px;
+      display: block;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: radial-gradient(circle at 50% 40%, #0f1840 0%, #060a18 65%);
+      box-shadow: inset 0 0 80px rgba(110, 140, 255, 0.08);
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 0 16px 16px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      background: transparent;
+      border: none;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+    }
+
+    .stat .value {
+      font-size: 1rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      border-radius: 999px;
+      padding: 6px 10px;
+      margin: 0 8px 8px 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .error {
+      color: var(--danger);
+      min-height: 1.3em;
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
+
+    .view-btns {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 12px;
+      flex-wrap: wrap;
+    }
+    .view-btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 16px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .view-btn:hover { filter: brightness(1.12); }
+    .view-btn.active {
+      background: var(--accent);
+      color: #0b1020;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    @media (max-width: 1000px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid var(--line); }
+      canvas { min-height: 420px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="card">
+        <h1>Artemis II</h1>
+        <div class="subtle" style="margin-bottom:14px;">Live JPL Horizons ephemeris viewer</div>
+        <div class="btn-row">
+          <button id="fetchBtn">Current Location</button>
+          <button id="fullMissionBtn">Full Mission</button>
+          <button id="playBtn" disabled>Play</button>
+        </div>
+        <div id="error" class="error"></div>
+      </div>
+
+      <div class="card">
+        <div class="stats" id="stats"></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div style="padding:16px 16px 0;">
+        <span class="pill"><span class="dot" style="background: var(--earth)"></span>Earth</span>
+        <span class="pill" id="moonPill"><span class="dot" style="background: var(--moon)"></span>Moon (nominal)</span>
+        <span class="pill"><span class="dot" style="background: var(--path)"></span>Trajectory path</span>
+        <span class="pill"><span class="dot" style="background: var(--ship)"></span>Artemis spacecraft</span>
+      </div>
+      <div class="view-btns">
+        <button class="view-btn active" data-view="full">Full</button>
+        <button class="view-btn" data-view="earth-moon-ship">Earth · Moon · Ship</button>
+        <button class="view-btn" data-view="ship-moon">Ship · Moon</button>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="scene"></canvas>
+      </div>
+      <div class="timeline">
+        <div id="timeLabel" class="subtle">No data loaded</div>
+        <input id="slider" type="range" min="0" max="0" value="0" />
+        <div id="frameLabel" class="subtle">0 / 0</div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const NOMINAL_MOON_DISTANCE_KM = 384400;
+    const EARTH_RADIUS_KM = 6378.137;
+
+    // Hardcoded mission parameters
+    const MISSION_START = '2026-Apr-02 02:00';
+    const MISSION_END   = '2026-Apr-10 23:00';
+    const OBJECT_ID     = '-1024';
+
+    function nowToHorizons() {
+      const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const fmt = d => {
+        const y  = d.getUTCFullYear();
+        const m  = MONTHS[d.getUTCMonth()];
+        const dd = String(d.getUTCDate()).padStart(2, '0');
+        const hh = String(d.getUTCHours()).padStart(2, '0');
+        const mm = String(d.getUTCMinutes()).padStart(2, '0');
+        return `${y}-${m}-${dd} ${hh}:${mm}`;
+      };
+      const now  = new Date();
+      const soon = new Date(now.getTime() + 60000); // +1 minute so stop > start
+      return { start: fmt(now), stop: fmt(soon) };
+    }
+
+    const sliderEl = document.getElementById('slider');
+    const timeLabelEl = document.getElementById('timeLabel');
+    const frameLabelEl = document.getElementById('frameLabel');
+    const statsEl = document.getElementById('stats');
+    const errorEl = document.getElementById('error');
+    const canvas = document.getElementById('scene');
+    const ctx = canvas.getContext('2d');
+
+    let frames = [];
+    let moonFrames = [];
+    let currentIndex = 0;
+    let currentView = 'full';
+    let isPlaying = false;
+    let rafId = null;
+    let lastTick = 0;
+
+    const sampleText = `API VERSION: 1.2
+API SOURCE: NASA/JPL Horizons API
+
+*******************************************************************************
+Target body name: Artemis II (spacecraft) (-1024) {source: Artemis_II_merged}
+Center body name: Earth (399)                     {source: DE441}
+*******************************************************************************
+$$SOE
+2461136.500000000 = A.D. 2026-Apr-06 00:00:00.0000 UTC
+ X =-1.209613112965343E+05 Y =-3.486970837820386E+05 Z =-3.222282895618925E+04
+ VX=-6.085792972769782E-02 VY=-6.480395989984593E-01 VZ=-5.888895123796334E-02
+ LT= 1.235807056376613E+00 RG= 3.704856350448893E+05 RR= 6.349194669945794E-01
+2461136.508333333 = A.D. 2026-Apr-06 00:12:00.0000 UTC
+ X =-1.210050786146334E+05 Y =-3.491629544725275E+05 Z =-3.226517117073337E+04
+ VX=-6.071980850928744E-02 VY=-6.460461968676845E-01 VZ=-5.872832176496853E-02
+ LT= 1.237329648534947E+00 RG= 3.709420966905680E+05 RR= 6.330305604984738E-01
+2461136.516666667 = A.D. 2026-Apr-06 00:24:00.0000 UTC
+ X =-1.210487504529937E+05 Y =-3.496273912240743E+05 Z =-3.230739806017255E+04
+ VX=-6.059260527232235E-02 VY=-6.440562741067096E-01 VZ=-5.856868066960286E-02
+ LT= 1.238847711935599E+00 RG= 3.713972006488491E+05 RR= 6.311479336491080E-01
+2461136.525000000 = A.D. 2026-Apr-06 00:36:00.0000 UTC
+ X =-1.210923349015590E+05 Y =-3.500903960959885E+05 Z =-3.234951052251972E+04
+ VX=-6.047726644596873E-02 VY=-6.420687393467722E-01 VZ=-5.841065304128323E-02
+ LT= 1.240361260556658E+00 RG= 3.718509511102587E+05 RR= 6.292709162574475E-01
+2461136.533333333 = A.D. 2026-Apr-06 00:48:00.0000 UTC
+ X =-1.211358404544063E+05 Y =-3.505519714871906E+05 Z =-3.239150973541990E+04
+ VX=-6.037322503941876E-02 VY=-6.400861147331396E-01 VZ=-5.825411961926877E-02
+ LT= 1.241870309949022E+00 RG= 3.723033527368392E+05 RR= 6.274016818893774E-01
+2461136.541666667 = A.D. 2026-Apr-06 01:00:00.0000 UTC
+ X =-1.211792749682660E+05 Y =-3.510121210691100E+05 Z =-3.243339689016169E+04
+ VX=-6.028018932749601E-02 VY=-6.381076477249473E-01 VZ=-5.809909302096272E-02
+ LT= 1.243374878959097E+00 RG= 3.727544111786001E+05 RR= 6.255394235085144E-01
+$$EOE`;
+
+    function getMoonPositionAtJD(jd) {
+      if (!moonFrames.length) return null;
+      if (moonFrames.length === 1) return moonFrames[0];
+      if (jd <= moonFrames[0].jdut) return moonFrames[0];
+      if (jd >= moonFrames[moonFrames.length - 1].jdut) return moonFrames[moonFrames.length - 1];
+      let lo = 0, hi = moonFrames.length - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (moonFrames[mid].jdut <= jd) lo = mid; else hi = mid;
+      }
+      const a = moonFrames[lo], b = moonFrames[hi];
+      const t = (jd - a.jdut) / (b.jdut - a.jdut);
+      return {
+        x: a.x + (b.x - a.x) * t,
+        y: a.y + (b.y - a.y) * t,
+        z: a.z + (b.z - a.z) * t,
+        rg: a.rg + (b.rg - a.rg) * t
+      };
+    }
+
+    function buildHorizonsParams(command, start, stop, step) {
+      return new URLSearchParams({
+        format: 'text',
+        COMMAND: `'${command}'`,
+        EPHEM_TYPE: 'VECTORS',
+        CENTER: `'500@399'`,
+        START_TIME: `'${start}'`,
+        STOP_TIME:  `'${stop}'`,
+        STEP_SIZE:  `'${step}'`,
+        TIME_TYPE:  `'UT'`,
+        OBJ_DATA:   `'NO'`
+      });
+    }
+
+    async function fetchBoth(start, stop, step) {
+      const [shipText, moonText] = await Promise.all([
+        fetch(`https://ssd.jpl.nasa.gov/api/horizons.api?${buildHorizonsParams(OBJECT_ID, start, stop, step)}`).then(r => r.text()),
+        fetch(`https://ssd.jpl.nasa.gov/api/horizons.api?${buildHorizonsParams('301', start, stop, step)}`).then(r => r.text())
+          .catch(err => { console.warn('Moon fetch failed:', err); return ''; })
+      ]);
+      return { shipText, moonData: parseHorizonsVectors(moonText) };
+    }
+
+    function setError(message = '') {
+      errorEl.textContent = message;
+    }
+
+    async function fetchHorizonsText(start, stop, step) {
+      setError('');
+      document.getElementById('fetchBtn').disabled = true;
+      document.getElementById('fullMissionBtn').disabled = true;
+      try {
+        const { shipText, moonData } = await fetchBoth(start, stop, step);
+        moonFrames = moonData;
+        document.getElementById('moonPill').innerHTML =
+          `<span class="dot" style="background: var(--moon)"></span>Moon${moonFrames.length ? '' : ' (nominal)'}`;
+        parseAndRender(shipText);
+        document.getElementById('playBtn').disabled = !frames.length;
+      } catch (err) {
+        setError(`Fetch failed: ${err.message}`);
+      } finally {
+        document.getElementById('fetchBtn').disabled = false;
+        document.getElementById('fullMissionBtn').disabled = false;
+      }
+    }
+
+    function extractHorizonsError(text) {
+      // Horizons wraps errors in !$$SOF / !$$EOF blocks, or starts lines with "!ERROR"
+      const errMatch = text.match(/!ERROR[^\n]*/i) || text.match(/No ephemeris[^\n]*/i);
+      if (errMatch) return errMatch[0].trim();
+      // Also check the "result" field in JSON-ish responses
+      const resultMatch = text.match(/"result"\s*:\s*"([^"]+)"/);
+      if (resultMatch) return resultMatch[1].slice(0, 300);
+      return null;
+    }
+
+    function parseAndRender(text) {
+      const parsed = parseHorizonsVectors(text);
+      frames = parsed;
+      currentIndex = 0;
+      sliderEl.max = Math.max(0, frames.length - 1);
+      sliderEl.value = '0';
+      updateStats();
+      draw();
+      if (!frames.length) {
+        const horizonsErr = extractHorizonsError(text);
+        if (horizonsErr) {
+          setError(`Horizons error: ${horizonsErr}`);
+        } else if (!text.includes('$$SOE')) {
+          setError('No $$SOE block found in Horizons response.');
+        } else {
+          setError('$$SOE block found but no records parsed. The time range may be outside the available ephemeris window.');
+        }
+      }
+    }
+
+    function parseHorizonsVectors(text) {
+      const start = text.indexOf('$$SOE');
+      const end = text.indexOf('$$EOE');
+      if (start === -1 || end === -1 || end <= start) return [];
+
+      const block = text.slice(start + 5, end).trim();
+      const lines = block.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const out = [];
+
+      for (let i = 0; i < lines.length; i += 4) {
+        const t = lines[i];
+        const p = lines[i + 1];
+        const v = lines[i + 2];
+        const extra = lines[i + 3];
+        if (!t || !p || !v || !extra) continue;
+
+        const timeMatch = t.match(/^([0-9.]+)\s*=\s*A\.D\.\s+(.+?)\s+UTC$/);
+        const posMatch = p.match(/X\s*=\s*([+\-0-9.E]+)\s+Y\s*=\s*([+\-0-9.E]+)\s+Z\s*=\s*([+\-0-9.E]+)/);
+        const velMatch = v.match(/VX\s*=\s*([+\-0-9.E]+)\s+VY\s*=\s*([+\-0-9.E]+)\s+VZ\s*=\s*([+\-0-9.E]+)/);
+        const extraMatch = extra.match(/LT\s*=\s*([+\-0-9.E]+)\s+RG\s*=\s*([+\-0-9.E]+)\s+RR\s*=\s*([+\-0-9.E]+)/);
+        if (!timeMatch || !posMatch || !velMatch || !extraMatch) continue;
+
+        const x = Number(posMatch[1]);
+        const y = Number(posMatch[2]);
+        const z = Number(posMatch[3]);
+        const vx = Number(velMatch[1]);
+        const vy = Number(velMatch[2]);
+        const vz = Number(velMatch[3]);
+        const lt = Number(extraMatch[1]);
+        const rg = Number(extraMatch[2]);
+        const rr = Number(extraMatch[3]);
+        const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+        const altitude = rg - EARTH_RADIUS_KM;
+
+        out.push({
+          jdut: Number(timeMatch[1]),
+          utcLabel: timeMatch[2],
+          x, y, z, vx, vy, vz, lt, rg, rr, speed, altitude
+        });
+      }
+
+      return out;
+    }
+
+    function updateStats() {
+      if (!frames.length) {
+        statsEl.innerHTML = '<div class="subtle">No parsed data yet.</div>';
+        return;
+      }
+      const frame = frames[currentIndex];
+      frameLabelEl.textContent = `${currentIndex + 1} / ${frames.length}`;
+      timeLabelEl.textContent = frame.utcLabel;
+
+      const cards = [
+        ['Range from Earth center', `${formatNumber(frame.rg)} km`],
+        ['Approx. altitude', `${formatNumber(frame.altitude)} km`],
+        ['Radial speed', `${frame.rr.toFixed(6)} km/s`],
+        ['Total speed', `${frame.speed.toFixed(6)} km/s`],
+        ['Light time', `${frame.lt.toFixed(6)} s`],
+        ['Position', `${formatNumber(frame.x)}, ${formatNumber(frame.y)}, ${formatNumber(frame.z)} km`]
+      ];
+      if (moonFrames.length) {
+        const moon = getMoonPositionAtJD(frame.jdut);
+        const shipMoonDist = Math.hypot(frame.x - moon.x, frame.y - moon.y, frame.z - moon.z);
+        cards.push(['Moon dist. from Earth', `${formatNumber(moon.rg)} km`]);
+        cards.push(['Ship–Moon distance', `${formatNumber(shipMoonDist)} km`]);
+      }
+      statsEl.innerHTML = cards.map(([label, value]) => `
+        <div class="stat">
+          <div class="label">${label}</div>
+          <div class="value">${value}</div>
+        </div>
+      `).join('');
+    }
+
+    function formatNumber(n) {
+      return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n);
+    }
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    }
+
+    // vp = { scale, cx, cy, wx, wy }  — maps world (wx,wy) to canvas (cx,cy)
+    function worldToCanvas(x, y, vp) {
+      return {
+        x: vp.cx + (x - vp.wx) * vp.scale,
+        y: vp.cy - (y - vp.wy) * vp.scale
+      };
+    }
+
+    function bboxOf(points) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const p of points) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+      return { minX, maxX, minY, maxY };
+    }
+
+    function fitViewport(worldPoints, width, height, marginFactor = 0.18) {
+      const bb = bboxOf(worldPoints);
+      const ww = Math.max(bb.maxX - bb.minX, 1);
+      const wh = Math.max(bb.maxY - bb.minY, 1);
+      const scale = Math.min(width, height) * (1 - marginFactor * 2) / Math.max(ww, wh);
+      return {
+        scale,
+        cx: width * 0.5,
+        cy: height * 0.5,
+        wx: (bb.minX + bb.maxX) / 2,
+        wy: (bb.minY + bb.maxY) / 2
+      };
+    }
+
+    function getMoonXY() {
+      if (moonFrames.length && frames.length) {
+        const m = getMoonPositionAtJD(frames[currentIndex].jdut);
+        return { x: m.x, y: m.y };
+      }
+      const angle = 0;
+      return {
+        x: Math.cos(angle) * NOMINAL_MOON_DISTANCE_KM,
+        y: Math.sin(angle) * NOMINAL_MOON_DISTANCE_KM
+      };
+    }
+
+    function draw() {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      ctx.clearRect(0, 0, width, height);
+
+      drawStars(width, height);
+
+      if (!frames.length) {
+        ctx.fillStyle = '#aab5df';
+        ctx.font = '16px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('Load Horizons data to draw the scene.', width * 0.5, height * 0.5);
+        return;
+      }
+
+      const frame = frames[currentIndex];
+      const moonXY = getMoonXY();
+      let vp;
+
+      if (currentView === 'full') {
+        const maxDistance = Math.max(
+          NOMINAL_MOON_DISTANCE_KM,
+          ...frames.map(f => Math.hypot(f.x, f.y))
+        );
+        const scale = (Math.min(width, height) * 0.37) / maxDistance;
+        vp = { scale, cx: width * 0.5, cy: height * 0.52, wx: 0, wy: 0 };
+      } else if (currentView === 'earth-moon-ship') {
+        vp = fitViewport([{ x: 0, y: 0 }, moonXY, { x: frame.x, y: frame.y }], width, height, 0.15);
+      } else {
+        // ship-moon: fit just ship and moon with a bit more breathing room
+        vp = fitViewport([moonXY, { x: frame.x, y: frame.y }], width, height, 0.22);
+      }
+
+      const earthRadiusPx = Math.max(currentView === 'full' ? 8 : 12, EARTH_RADIUS_KM * vp.scale);
+      const moonRadiusPx = Math.max(currentView === 'full' ? 5 : 8, earthRadiusPx * 0.27);
+
+      drawAxes(vp, width, height);
+      drawEarth(vp, earthRadiusPx);
+      drawMoon(vp, moonRadiusPx);
+      drawPath(vp);
+      drawShip(vp);
+      drawHud(width, height, vp.scale);
+    }
+
+    function drawStars(width, height) {
+      for (let i = 0; i < 100; i++) {
+        const x = (i * 127.1) % width;
+        const y = (i * 83.7) % height;
+        const r = (i % 3) + 0.3;
+        ctx.globalAlpha = 0.15 + ((i % 10) / 50);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawAxes(vp, width, height) {
+      // draw axes through world origin
+      const origin = worldToCanvas(0, 0, vp);
+      ctx.strokeStyle = 'rgba(170,181,223,0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, origin.y);
+      ctx.lineTo(width, origin.y);
+      ctx.moveTo(origin.x, 0);
+      ctx.lineTo(origin.x, height);
+      ctx.stroke();
+    }
+
+    function drawEarth(vp, radius) {
+      const p = worldToCanvas(0, 0, vp);
+      const grad = ctx.createRadialGradient(p.x - radius * 0.4, p.y - radius * 0.5, radius * 0.2, p.x, p.y, radius);
+      grad.addColorStop(0, '#9ad0ff');
+      grad.addColorStop(0.6, '#4f8dff');
+      grad.addColorStop(1, '#1943a0');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#e7ecff';
+      ctx.font = '12px system-ui';
+      ctx.fillText('Earth', p.x + radius + 8, p.y - radius - 6);
+    }
+
+    function drawMoon(vp, radius) {
+      const moonXY = getMoonXY();
+      const label = moonFrames.length ? 'Moon' : 'Moon (nominal)';
+      const p = worldToCanvas(moonXY.x, moonXY.y, vp);
+
+      // dashed orbit ring only in full view (would be enormous otherwise)
+      if (currentView === 'full') {
+        const earthP = worldToCanvas(0, 0, vp);
+        const orbitR = moonFrames.length
+          ? getMoonPositionAtJD(frames[currentIndex].jdut).rg * vp.scale
+          : NOMINAL_MOON_DISTANCE_KM * vp.scale;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = 'rgba(207,214,230,0.18)';
+        ctx.beginPath();
+        ctx.arc(earthP.x, earthP.y, orbitR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.fillStyle = '#cfd6e6';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#e7ecff';
+      ctx.font = '12px system-ui';
+      ctx.fillText(label, p.x + radius + 8, p.y - 6);
+    }
+
+    function drawPath(vp) {
+      ctx.strokeStyle = '#8fe388';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      frames.forEach((f, i) => {
+        const p = worldToCanvas(f.x, f.y, vp);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+
+      for (let i = 0; i < frames.length; i++) {
+        const p = worldToCanvas(frames[i].x, frames[i].y, vp);
+        ctx.fillStyle = i <= currentIndex ? 'rgba(143,227,136,0.9)' : 'rgba(143,227,136,0.25)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawShip(vp) {
+      const frame = frames[currentIndex];
+      const p = worldToCanvas(frame.x, frame.y, vp);
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      const velLen = 40;
+      const mag = Math.hypot(frame.vx, frame.vy) || 1;
+      const dx = (frame.vx / mag) * velLen;
+      const dy = (-frame.vy / mag) * velLen;
+      ctx.strokeStyle = 'rgba(255, 209, 102, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + dx, p.y + dy);
+      ctx.stroke();
+
+      ctx.fillStyle = '#e7ecff';
+      ctx.font = '12px system-ui';
+      ctx.fillText('Artemis II', p.x + 10, p.y - 10);
+    }
+
+    function drawHud(width, height, scale) {
+      const pad = 14;
+      ctx.fillStyle = 'rgba(6,10,24,0.75)';
+      ctx.fillRect(pad, pad, 220, 66);
+      ctx.strokeStyle = 'rgba(170,181,223,0.2)';
+      ctx.strokeRect(pad, pad, 220, 66);
+
+      ctx.fillStyle = '#e7ecff';
+      ctx.font = '12px system-ui';
+      ctx.fillText('Top-down view: X/Y only', pad + 10, pad + 20);
+      ctx.fillText(`Scale: ${Math.round(1 / scale).toLocaleString()} km per px`, pad + 10, pad + 40);
+      ctx.fillText('Frame: Ecliptic J2000, Earth-centered', pad + 10, pad + 58);
+    }
+
+    function setFrame(index) {
+      if (!frames.length) return;
+      currentIndex = Math.max(0, Math.min(frames.length - 1, index));
+      sliderEl.value = String(currentIndex);
+      updateStats();
+      draw();
+    }
+
+    function animate(ts) {
+      if (!isPlaying) return;
+      if (!lastTick || ts - lastTick > 180) {
+        lastTick = ts;
+        const next = (currentIndex + 1) % frames.length;
+        setFrame(next);
+      }
+      rafId = requestAnimationFrame(animate);
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('playBtn').textContent = isPlaying ? 'Pause' : 'Play';
+      if (isPlaying) {
+        lastTick = 0;
+        rafId = requestAnimationFrame(animate);
+      } else if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    }
+
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        currentView = this.dataset.view;
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        draw();
+      });
+    });
+
+    document.getElementById('fetchBtn').addEventListener('click', () => {
+      const { start, stop } = nowToHorizons();
+      fetchHorizonsText(start, stop, '1 m');
+    });
+    document.getElementById('fullMissionBtn').addEventListener('click', () => {
+      fetchHorizonsText(MISSION_START, MISSION_END, '1 h');
+    });
+    document.getElementById('playBtn').addEventListener('click', togglePlay);
+    sliderEl.addEventListener('input', () => setFrame(Number(sliderEl.value)));
+    window.addEventListener('resize', resizeCanvas);
+
+    resizeCanvas();
+  </script>
+</body>
+</html>
