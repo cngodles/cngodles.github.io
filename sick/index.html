@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Med Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 500px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 1.25rem;
+      border: 1px solid #334155;
+    }
+
+    .card-name {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.4rem;
+    }
+
+    .card-status {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-status.ok { color: #4ade80; }
+    .card-status.wait { color: #fb923c; }
+    .card-status.soon { color: #facc15; }
+
+    .card-detail {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.6rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-nyquil { background: #6366f1; color: #fff; }
+    .btn-motrin { background: #ec4899; color: #fff; }
+
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+    }
+
+    .history {
+      background: #1e293b;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      overflow: hidden;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid #334155;
+      font-size: 0.85rem;
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    .history-pill {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .pill-nyquil { background: #312e81; color: #a5b4fc; }
+    .pill-motrin { background: #831843; color: #f9a8d4; }
+
+    .history-time { color: #94a3b8; }
+
+    .empty-history {
+      padding: 2rem;
+      text-align: center;
+      color: #475569;
+      font-size: 0.85rem;
+    }
+
+    .clear-btn {
+      margin-top: 1rem;
+      background: transparent;
+      border: 1px solid #334155;
+      color: #64748b;
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .clear-btn:hover { border-color: #ef4444; color: #ef4444; }
+
+    .last-taken {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Med Tracker</h1>
+
+<div class="cards">
+  <div class="card" id="nyquil-card">
+    <div class="card-name">NyQuil</div>
+    <div class="card-status" id="nyquil-status">—</div>
+    <div class="card-detail" id="nyquil-detail">No dose recorded</div>
+    <div class="last-taken" id="nyquil-last"></div>
+    <button class="btn btn-nyquil" id="nyquil-btn" onclick="takeDose('nyquil')">Take NyQuil</button>
+  </div>
+
+  <div class="card" id="motrin-card">
+    <div class="card-name">Motrin (Ibuprofen)</div>
+    <div class="card-status" id="motrin-status">—</div>
+    <div class="card-detail" id="motrin-detail">No dose recorded</div>
+    <div class="last-taken" id="motrin-last"></div>
+    <button class="btn btn-motrin" id="motrin-btn" onclick="takeDose('motrin')">Take Motrin</button>
+  </div>
+</div>
+
+<div class="section-title">Dose History</div>
+<div class="history" id="history-list">
+  <div class="empty-history">No doses recorded yet.</div>
+</div>
+
+<div>
+  <button class="clear-btn" onclick="clearHistory()">Clear all history</button>
+</div>
+
+<script>
+  const MEDS = {
+    nyquil: { label: 'NyQuil', interval: 4 * 60 * 60 * 1000, cls: 'pill-nyquil' },
+    motrin: { label: 'Motrin', interval: 6 * 60 * 60 * 1000, cls: 'pill-motrin' }
+  };
+
+  function getHistory() {
+    return JSON.parse(localStorage.getItem('medHistory') || '[]');
+  }
+
+  function saveHistory(h) {
+    localStorage.setItem('medHistory', JSON.stringify(h));
+  }
+
+  function takeDose(med) {
+    const h = getHistory();
+    h.unshift({ med, time: Date.now() });
+    saveHistory(h);
+    render();
+  }
+
+  function clearHistory() {
+    if (confirm('Clear all dose history?')) {
+      localStorage.removeItem('medHistory');
+      render();
+    }
+  }
+
+  function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
+      ', ' + new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  function formatCountdown(ms) {
+    if (ms <= 0) return null;
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
+  function render() {
+    const h = getHistory();
+    const now = Date.now();
+
+    for (const [key, cfg] of Object.entries(MEDS)) {
+      const last = h.find(d => d.med === key);
+      const statusEl = document.getElementById(`${key}-status`);
+      const detailEl = document.getElementById(`${key}-detail`);
+      const lastEl   = document.getElementById(`${key}-last`);
+      const btnEl    = document.getElementById(`${key}-btn`);
+
+      if (!last) {
+        statusEl.textContent = '—';
+        statusEl.className = 'card-status';
+        detailEl.textContent = 'No dose recorded';
+        lastEl.textContent = '';
+        btnEl.disabled = false;
+        continue;
+      }
+
+      const elapsed = now - last.time;
+      const remaining = cfg.interval - elapsed;
+      const cd = formatCountdown(remaining);
+
+      lastEl.textContent = `Last taken: ${formatTime(last.time)}`;
+
+      if (remaining <= 0) {
+        statusEl.textContent = 'OK to take';
+        statusEl.className = 'card-status ok';
+        detailEl.textContent = `${Math.floor(elapsed / 3600000)}h ${Math.floor((elapsed % 3600000) / 60000)}m since last dose`;
+        btnEl.disabled = false;
+      } else if (remaining < 60 * 60 * 1000) {
+        statusEl.textContent = `${cd}`;
+        statusEl.className = 'card-status soon';
+        detailEl.textContent = 'Almost time — wait a bit longer';
+        btnEl.disabled = true;
+      } else {
+        statusEl.textContent = `${cd}`;
+        statusEl.className = 'card-status wait';
+        detailEl.textContent = 'Too soon for next dose';
+        btnEl.disabled = true;
+      }
+    }
+
+    const listEl = document.getElementById('history-list');
+    if (h.length === 0) {
+      listEl.innerHTML = '<div class="empty-history">No doses recorded yet.</div>';
+      return;
+    }
+
+    listEl.innerHTML = h.map(d => {
+      const cfg = MEDS[d.med];
+      return `
+        <div class="history-item">
+          <span class="history-pill ${cfg.cls}">${cfg.label}</span>
+          <span class="history-time">${formatTime(d.time)}</span>
+        </div>`;
+    }).join('');
+  }
+
+  render();
+  setInterval(render, 30000);
+</script>
+</body>
+</html>
